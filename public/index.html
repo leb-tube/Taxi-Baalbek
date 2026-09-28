@@ -1,0 +1,595 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taxi Lebanon</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+#auth-screen { display: none; align-items: center; justify-content: center; padding: 20px; }
+#auth-screen.active { display: flex; }
+.auth-container { background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); width: 100%; max-width: 420px; }
+.auth-container h1 { text-align: center; margin-bottom: 20px; }
+.tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+.tab { flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-size: 15px; color: #888; border-bottom: 3px solid transparent; }
+.tab.active { color: #111; border-bottom-color: #ffc107; font-weight: bold; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+input[type=text], input[type=tel], input[type=password] { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+input:focus { outline: none; border-color: #ffc107; }
+.btn-primary, .btn-secondary, .btn-logout, .btn-danger { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; }
+.btn-primary { background: #ffc107; color: #111; width: 100%; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-secondary { background: #e0e0e0; color: #333; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-logout { background: #ff4d4d; color: #fff; padding: 8px 15px; font-size: 13px; }
+.role-selector { display: flex; gap: 10px; margin-bottom: 12px; }
+.role-card { flex: 1; padding: 15px; border: 2px solid #ddd; border-radius: 10px; cursor: pointer; text-align: center; }
+.role-card input { display: none; }
+.role-card:has(input:checked) { border-color: #ffc107; background: #fffbea; }
+.role-icon { font-size: 28px; display: block; margin-bottom: 5px; }
+.hidden { display: none !important; }
+.error { color: #e74c3c; font-size: 14px; text-align: center; margin-top: 8px; }
+.app-header { background: #111; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+#customer-map, #driver-map { height: 50vh; width: 100%; }
+.bottom-panel { background: #fff; padding: 15px; border-radius: 16px 16px 0 0; margin-top: -16px; position: relative; z-index: 1000; min-height: 30vh; max-height: 45vh; overflow-y: auto; }
+.actions { display: flex; gap: 10px; margin: 10px 0; }
+.actions .btn-primary, .actions .btn-secondary, .actions .btn-danger { flex: 1; }
+.ride-card { background: #fffbea; border: 2px solid #ffc107; padding: 15px; margin: 10px 0; border-radius: 12px; }
+.ride-card h4 { margin-bottom: 10px; color: #111; }
+.ride-card p { margin: 5px 0; font-size: 14px; }
+.btn-accept { background: #28a745; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+.btn-call { background: #007bff; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 10px; margin-left: 5px; }
+.info-card { background: #e8f5e9; border: 2px solid #28a745; padding: 15px; margin: 10px 0; border-radius: 12px; }
+.info-card h4 { margin-bottom: 10px; color: #1b5e20; }
+.info-card p { margin: 5px 0; font-size: 14px; }
+.notification { position: fixed; top: 20px; right: 20px; background: #333; color: #fff; padding: 15px 25px; border-radius: 10px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.3); max-width: 350px; }
+.driver-badge { display: inline-block; background: #28a745; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+.driver-badge.busy { background: #dc3545; }
+.searching { text-align: center; padding: 20px; }
+.searching .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #ffc107; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="notification" class="notification"></div>
+
+<div id="auth-screen" class="screen active">
+  <div class="auth-container">
+    <h1>🚕 Taxi Lebanon</h1>
+    <div class="tabs">
+      <button class="tab active" data-tab="login">تسجيل الدخول</button>
+      <button class="tab" data-tab="register">حساب جديد</button>
+    </div>
+    <form id="login-form" class="tab-content active">
+      <input type="tel" id="login-phone" placeholder="رقم الهاتف" required>
+      <input type="password" id="login-password" placeholder="كلمة المرور" required>
+      <button type="submit" class="btn-primary">دخول</button>
+      <p class="error" id="login-error"></p>
+    </form>
+    <form id="register-form" class="tab-content">
+      <input type="text" id="reg-name" placeholder="الاسم الكامل" required>
+      <input type="tel" id="reg-phone" placeholder="رقم الهاتف" required>
+      <input type="password" id="reg-password" placeholder="كلمة المرور (6+)" required minlength="6">
+      <div class="role-selector">
+        <label class="role-card">
+          <input type="radio" name="role" value="customer" checked>
+          <div><span class="role-icon">🧍</span><span>زبون</span></div>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="role" value="driver">
+          <div><span class="role-icon">🚗</span><span>سائق</span></div>
+        </label>
+      </div>
+      <div id="driver-fields" class="hidden">
+        <input type="text" id="reg-car-model" placeholder="نوع السيارة">
+        <input type="text" id="reg-car-plate" placeholder="رقم اللوحة">
+      </div>
+      <button type="submit" class="btn-primary">إنشاء الحساب</button>
+      <p class="error" id="reg-error"></p>
+    </form>
+  </div>
+</div>
+
+<div id="customer-screen" class="screen">
+  <header class="app-header">
+    <span>🧍 مرحباً، <b id="customer-name"></b></span>
+    <button class="btn-logout" onclick="logout()">خروج</button>
+  </header>
+  <div id="customer-map"></div>
+  <div class="bottom-panel">
+    <div id="customer-hint">📍 اضغط على الخريطة لتحديد نقطة الانطلاق ثم الوجهة</div>
+    <div class="actions" id="customer-actions">
+      <button class="btn-secondary" onclick="clearSelection()">مسح</button>
+      <button class="btn-primary" id="request-btn" disabled>اطلب تاكسي</button>
+    </div>
+    <div id="ride-status"></div>
+  </div>
+</div>
+
+<div id="driver-screen" class="screen">
+  <header class="app-header">
+    <span>🚗 مرحباً، <b id="driver-name"></b></span>
+    <button class="btn-logout" onclick="logout()">خروج</button>
+  </header>
+  <div id="driver-map"></div>
+  <div class="bottom-panel">
+    <button class="btn-primary" id="toggle-online">🟢 ابدأ استقبال الطلبات</button>
+    <div id="requests-list"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const LEBANON_CENTER = [33.8547, 35.8623];
+const LEBANON_ZOOM = 9;
+const LOCATION_UPDATE_INTERVAL = 5000;
+
+const API = { 
+  token: localStorage.getItem("token"), 
+  user: JSON.parse(localStorage.getItem("user") || "null") 
+};
+
+function saveSession(token, user) { 
+  API.token = token; API.user = user; 
+  localStorage.setItem("token", token); 
+  localStorage.setItem("user", JSON.stringify(user)); 
+}
+function logout() { localStorage.clear(); location.reload(); }
+function showScreen(id) { 
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); 
+  document.getElementById(id).classList.add("active"); 
+}
+function notify(msg, duration = 3500) {
+  const el = document.getElementById("notification");
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", duration);
+}
+function routeByRole() {
+  if (!API.token || !API.user) return showScreen("auth-screen");
+  if (API.user.role === "driver") {
+    document.getElementById("driver-name").textContent = API.user.name;
+    showScreen("driver-screen");
+    initDriverApp();
+  } else {
+    document.getElementById("customer-name").textContent = API.user.name;
+    showScreen("customer-screen");
+    initCustomerApp();
+  }
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab + "-form").classList.add("active");
+  };
+});
+document.querySelectorAll("input[name=role]").forEach(r => {
+  r.onchange = () => { 
+    document.getElementById("driver-fields").classList.toggle("hidden", r.value !== "driver"); 
+  };
+});
+
+document.getElementById("login-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "";
+  try {
+    const res = await fetch("/api/auth/login", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ 
+        phone: document.getElementById("login-phone").value.trim(), 
+        password: document.getElementById("login-password").value 
+      }) 
+    });
+    const data = await res.json();
+    if (data.error) return errEl.textContent = data.error;
+    saveSession(data.token, data.user);
+    routeByRole();
+  } catch (err) {
+    errEl.textContent = "خطأ في الاتصال";
+  }
+};
+
+document.getElementById("register-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const role = document.querySelector("input[name=role]:checked").value;
+  const errEl = document.getElementById("reg-error");
+  errEl.textContent = "";
+  try {
+    const res = await fetch("/api/auth/register", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ 
+        name: document.getElementById("reg-name").value.trim(), 
+        phone: document.getElementById("reg-phone").value.trim(), 
+        password: document.getElementById("reg-password").value, 
+        role, 
+        carModel: document.getElementById("reg-car-model").value, 
+        carPlate: document.getElementById("reg-car-plate").value 
+      }) 
+    });
+    const data = await res.json();
+    if (data.error) return errEl.textContent = data.error;
+    saveSession(data.token, data.user);
+    routeByRole();
+  } catch (err) {
+    errEl.textContent = "خطأ في الاتصال";
+  }
+};
+
+routeByRole();
+
+// ═══════════════════════════════════════
+// 🧍 تطبيق الزبون
+// ═══════════════════════════════════════
+let customerMap, customerMarkers = [], customerPoints = [], socket;
+let driversMarkers = {};
+let currentRideId = null;
+
+function initCustomerApp() {
+  if (customerMap) return;
+  socket = io();
+
+  customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(customerMap);
+
+  socket.on("drivers-list-update", (drivers) => {
+    const currentIds = new Set(drivers.map(d => d.id));
+    for (const id in driversMarkers) {
+      if (!currentIds.has(id)) {
+        driversMarkers[id].remove();
+        delete driversMarkers[id];
+      }
+    }
+    drivers.forEach(driver => {
+      const color = driver.busy ? '#dc3545' : '#28a745';
+      const icon = L.divIcon({ 
+        html: `<div style="background:${color};color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">🚗</div>`,
+        className: "",
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+      if (driversMarkers[driver.id]) {
+        driversMarkers[driver.id].setLatLng([driver.lat, driver.lng]);
+        driversMarkers[driver.id].setIcon(icon);
+      } else {
+        driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon })
+          .addTo(customerMap)
+          .bindPopup(`<b>🚗 ${driver.name}</b><br>${driver.carModel} — ${driver.carPlate}<br><span class="driver-badge ${driver.busy ? 'busy' : ''}">${driver.busy ? 'مشغول' : 'متاح'}</span>`);
+      }
+    });
+  });
+
+  socket.on("driver-location-update", ({ driverId, lat, lng }) => {
+    if (driversMarkers[driverId]) {
+      driversMarkers[driverId].setLatLng([lat, lng]);
+    }
+  });
+
+  socket.on("search-started", ({ rideId, driversOnline }) => {
+    document.getElementById("ride-status").innerHTML = `
+      <div class="searching">
+        <div class="spinner"></div>
+        <p style="margin-top:15px"><b>⏳ جاري البحث عن سائق...</b></p>
+        <p style="color:#666;font-size:14px;margin-top:5px">${driversOnline} سائق متصل</p>
+        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
+      </div>
+    `;
+  });
+
+  socket.on("search-restarted", ({ message }) => {
+    document.getElementById("ride-status").innerHTML = `
+      <div class="searching">
+        <div class="spinner"></div>
+        <p style="margin-top:15px"><b>${message}</b></p>
+        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
+      </div>
+    `;
+    notify(message);
+  });
+
+  // ⚠️ بيانات السائق تصل مباشرة من السيرفر
+  socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
+    document.getElementById("ride-status").innerHTML = `
+      <div class="info-card">
+        <h4>✅ السائق في الطريق إليك</h4>
+        <p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">${etaMin} دقيقة</span></p>
+        <p><b>👤 الاسم:</b> ${driver.name}</p>
+        <p><b>📞 الهاتف:</b> ${driver.phone}</p>
+        <p><b>🚗 السيارة:</b> ${driver.carModel}</p>
+        <p><b>🔢 اللوحة:</b> ${driver.carPlate}</p>
+        <a href="tel:${driver.phone}" class="btn-call">📞 اتصال</a>
+        <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button>
+      </div>
+    `;
+  });
+
+  socket.on("ride-cancelled", ({ rideId }) => {
+    if (currentRideId !== rideId) return;
+    document.getElementById("ride-status").innerHTML = "";
+    currentRideId = null;
+  });
+
+  socket.on("no-drivers", () => {
+    document.getElementById("ride-status").innerHTML = `
+      <div class="searching">
+        <p style="color:#856404;background:#fff3cd;padding:12px;border-radius:8px">⚠️ لا سائق متاح حالياً — سيتم الإشعار عند توفر سائق</p>
+        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
+      </div>
+    `;
+  });
+
+  customerMap.on("click", (e) => {
+    if (currentRideId) return;
+    if (customerPoints.length >= 2) return;
+    customerPoints.push(e.latlng);
+    const label = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
+    customerMarkers.push(L.marker(e.latlng).addTo(customerMap).bindPopup(label).openPopup());
+    
+    if (customerPoints.length === 2) {
+      document.getElementById("request-btn").disabled = false;
+      L.polyline(customerPoints, { color: "blue", weight: 4 }).addTo(customerMap);
+      document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
+    }
+  });
+
+  document.getElementById("request-btn").onclick = async () => {
+    const body = { 
+      customerId: API.user.id, 
+      from: { lat: customerPoints[0].lat, lng: customerPoints[0].lng, address: "نقطة الانطلاق" }, 
+      to: { lat: customerPoints[1].lat, lng: customerPoints[1].lng, address: "الوجهة" } 
+    };
+    const res = await fetch("/api/rides", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(body) 
+    });
+    const ride = await res.json();
+    currentRideId = ride._id;
+    socket.emit("new-ride", { ...ride, customerSocketId: socket.id });
+  };
+}
+
+window.cancelRide = () => {
+  if (!currentRideId) return;
+  if (!confirm("هل تريد إلغاء الطلب؟")) return;
+  
+  socket.emit("cancel-ride", { 
+    rideId: currentRideId, 
+    cancelledBy: "customer"
+  });
+  
+  // لا تنتظر رد السيرفر — نظّف فوراً
+  document.getElementById("ride-status").innerHTML = "";
+  currentRideId = null;
+  notify("✅ تم إلغاء الطلب");
+  clearSelection();
+};
+
+window.clearSelection = () => {
+  customerMarkers.forEach(m => m.remove());
+  customerMarkers = []; customerPoints = [];
+  document.getElementById("request-btn").disabled = true;
+  document.getElementById("customer-hint").textContent = "📍 اضغط على الخريطة";
+  document.getElementById("ride-status").innerHTML = "";
+  if (customerMap) customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
+};
+
+// ═══════════════════════════════════════
+// 🚗 تطبيق السائق
+// ═══════════════════════════════════════
+let driverMap, driverMarker, driverSocket, isOnline = false;
+let currentRide = null;
+let myLat = LEBANON_CENTER[0], myLng = LEBANON_CENTER[1];
+let locationInterval = null;
+
+function initDriverApp() {
+  if (driverMap) return;
+  driverSocket = io();
+
+  driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(driverMap);
+
+  if (!navigator.geolocation) {
+    alert("⚠️ متصفحك لا يدعم تحديد الموقع");
+    return;
+  }
+
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      myLat = pos.coords.latitude;
+      myLng = pos.coords.longitude;
+      if (driverMarker) {
+        driverMarker.setLatLng([myLat, myLng]);
+      } else {
+        driverMarker = L.marker([myLat, myLng]).addTo(driverMap).bindPopup("📍 موقعي").openPopup();
+        driverMap.setView([myLat, myLng], 15);
+      }
+    },
+    (err) => console.error("GPS:", err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+
+  locationInterval = setInterval(() => {
+    if (isOnline) {
+      driverSocket.emit("driver-location", { driverId: API.user.id, lat: myLat, lng: myLng });
+    }
+  }, LOCATION_UPDATE_INTERVAL);
+
+  document.getElementById("toggle-online").onclick = () => {
+    isOnline = !isOnline;
+    const btn = document.getElementById("toggle-online");
+    btn.textContent = isOnline ? "⛔ إيقاف الاستقبال" : "🟢 ابدأ استقبال الطلبات";
+    btn.style.background = isOnline ? "#28a745" : "#ffc107";
+    btn.style.color = isOnline ? "#fff" : "#111";
+    
+    if (isOnline) {
+      driverSocket.emit("driver-online", { 
+        driverId: API.user.id,
+        name: API.user.name,
+        carModel: API.user.carModel,
+        carPlate: API.user.carPlate,
+        lat: myLat, lng: myLng 
+      });
+      notify("✅ بدأت الاستقبال");
+    } else {
+      driverSocket.emit("driver-offline", { driverId: API.user.id });
+      notify("⛔ أوقفت الاستقبال");
+    }
+  };
+driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
+  currentRide = { _id: rideId, ...ride, etaMin };
+  
+  document.getElementById("requests-list").innerHTML = `
+    <div class="info-card">
+      <h4>🧍 بيانات الزبون</h4>
+      <p><b>👤 الاسم:</b> ${ride.customer?.name || "غير معروف"}</p>
+      <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
+      <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
+      <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
+      <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
+      <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
+    </div>
+  `;
+  
+  // ارسم على الخريطة
+  const fromLat = ride.from.lat, fromLng = ride.from.lng;
+  const toLat = ride.to.lat, toLng = ride.to.lng;
+  
+  L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
+  L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
+  L.polyline([[fromLat, fromLng], [toLat, toLng]], { 
+    color: "blue", weight: 5, dashArray: "10,10" 
+  }).addTo(driverMap);
+  driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
+  
+  notify("✅ تم تأكيد القبول");
+});
+  driverSocket.on("ride-request", (ride) => {
+    if (currentRide) return;
+    if (document.getElementById("ride-" + ride._id)) return;
+    
+    const card = document.createElement("div");
+    card.className = "ride-card";
+    card.id = "ride-" + ride._id;
+    
+    const distanceInfo = ride.distanceToCustomer 
+      ? `<p style="color:#28a745;font-weight:bold">📏 المسافة: ${ride.distanceToCustomer} كم</p>
+         <p style="color:#007bff;font-weight:bold">⏱️ الوصول المتوقع: ${ride.etaMin} دقيقة</p>` 
+      : "";
+    
+    card.innerHTML = `
+      <h4>🚕 طلب جديد</h4>
+      ${distanceInfo}
+      <p><b>👤 الزبون:</b> ${ride.customer?.name || "غير معروف"}</p>
+      <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
+      <button class="btn-accept" onclick="acceptRide('${ride._id}', ${ride.etaMin || 0})">
+        ✅ قبول الطلب
+      </button>
+    `;
+    document.getElementById("requests-list").appendChild(card);
+    notify(`🚕 طلب جديد — ${ride.distanceToCustomer} كم`);
+  });
+
+  // ⚠️ اسم موحّد: ride-removed (يأتي من السيرفر)
+  driverSocket.on("ride-removed", ({ rideId }) => {
+    const card = document.getElementById("ride-" + rideId);
+    if (card) card.remove();
+    if (currentRide && currentRide._id === rideId) {
+      currentRide = null;
+      document.getElementById("requests-list").innerHTML = "";
+      driverMap.eachLayer(l => {
+        if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
+      });
+    }
+  });
+
+  driverSocket.on("ride-unavailable", ({ rideId }) => {
+    document.getElementById("ride-" + rideId)?.remove();
+    notify("⚠️ الرحلة اتخذها سائق آخر");
+  });
+
+  driverSocket.on("customer-cancelled", ({ rideId }) => {
+    document.getElementById("ride-" + rideId)?.remove();
+    if (currentRide && currentRide._id === rideId) {
+      currentRide = null;
+      document.getElementById("requests-list").innerHTML = "";
+      driverMap.eachLayer(l => {
+        if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
+      });
+      notify("⚠️ الزبون ألغى الطلب");
+    }
+  });
+}
+
+window.acceptRide = (rideId, etaMin) => {
+  // ⚠️ لا fetch هنا — فقط Socket.IO
+  driverSocket.emit("accept-ride", { 
+    rideId, 
+    driverId: API.user.id, 
+    etaMin 
+  });
+  
+  // احفظ الرحلة محلياً
+  const card = document.getElementById("ride-" + rideId);
+  if (card) {
+    currentRide = { _id: rideId, etaMin };
+  }
+  
+  // امسح كل البطاقات
+  document.getElementById("requests-list").innerHTML = "";
+  
+  // ⚠️ البيانات الكاملة ستصل عبر socket.on("ride-accepted") — لكن نحن السائق
+  // لذا سنستقبل تأكيد عبر "ride-confirmed" (سنضيفه في السيرفر)
+  
+  notify("⏳ جاري تأكيد القبول...");
+};
+
+// ═══ استقبل تأكيد القبول للسائق ═══
+// (سنضيفها في socket.listeners لاحقاً)
+window.cancelRideDriver = () => {
+  if (!currentRide) return;
+  if (!confirm("هل تريد إلغاء الطلب؟ سيتم البحث عن سائق آخر للزبون.")) return;
+  
+  driverSocket.emit("cancel-ride", { 
+    rideId: currentRide._id, 
+    cancelledBy: "driver"
+  });
+  
+  currentRide = null;
+  document.getElementById("requests-list").innerHTML = "";
+  driverMap.eachLayer(l => {
+    if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
+  });
+  driverMap.setView([myLat, myLng], 15);
+  notify("✅ تم إلغاء الطلب");
+};
+
+window.completeRide = () => {
+  if (!currentRide) return;
+  driverSocket.emit("ride-completed", { 
+    driverId: API.user.id, 
+    rideId: currentRide._id 
+  });
+  currentRide = null;
+  document.getElementById("requests-list").innerHTML = "";
+  driverMap.eachLayer(l => {
+    if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
+  });
+  driverMap.setView([myLat, myLng], 15);
+  notify("✅ تم إنهاء الرحلة");
+};
+</script>
+</body>
+</html>
