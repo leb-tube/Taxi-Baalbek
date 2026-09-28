@@ -34,9 +34,20 @@ app.get("/admin/reset-db", async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB error:", err.message));
+console.log("🔄 Attempting MongoDB connection...");
+console.log("📍 MONGO_URI:", process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 60) + "..." : "❌ MISSING!");
+
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+})
+  .then(() => console.log("✅ MongoDB connected successfully"))
+  .catch(err => {
+    console.error("❌ MongoDB connection FAILED:");
+    console.error("   Message:", err.message);
+    console.error("   Code:", err.code);
+    console.error("   Full URI:", process.env.MONGO_URI);
+  });
 
 const SEARCH_RADIUS_KM = parseFloat(process.env.SEARCH_RADIUS_KM) || 10;
 const SEND_TO_NEAREST_ONLY = process.env.SEND_TO_NEAREST_ONLY === "true";
