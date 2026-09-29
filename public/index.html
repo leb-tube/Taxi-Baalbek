@@ -243,13 +243,47 @@ routeByRole();
 let customerMap, customerMarkers = [], customerPoints = [], socket;
 let driversMarkers = {};
 let currentRideId = null;
+// ═══════════════════════════════════════
+// 🗺️ دالة إنشاء الطبقات (للاستخدام في الخريطتين)
+// ═══════════════════════════════════════
+function addMapLayers(map) {
+  const streetsLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { attribution: "© OpenStreetMap", maxZoom: 19 }
+  );
 
+  const satelliteLayer = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { attribution: "© Esri", maxZoom: 19 }
+  );
+
+  const hybridLayer = L.layerGroup([
+    satelliteLayer,
+    L.tileLayer(
+      "https://stamen-tiles-{s}.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
+      { attribution: "© Stamen", maxZoom: 19, opacity: 0.7 }
+    )
+  ]);
+
+  // الخريطة الافتراضية
+  streetsLayer.addTo(map);
+
+  // زر التبديل
+  L.control.layers({
+    "🗺️ شوارع": streetsLayer,
+    "🛰️ قمر صناعي": satelliteLayer,
+    "🌍 هجين": hybridLayer
+  }, null, {
+    position: "topright",
+    collapsed: false
+  }).addTo(map);
+}
 function initCustomerApp() {
   if (customerMap) return;
   socket = io();
 
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(customerMap);
+ addMapLayers(customerMap);
 
   socket.on("drivers-list-update", (drivers) => {
     const currentIds = new Set(drivers.map(d => d.id));
@@ -405,8 +439,8 @@ function initDriverApp() {
   if (driverMap) return;
   driverSocket = io();
 
-  driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(driverMap);
+ driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
+ addMapLayers(driverMap);
 
   if (!navigator.geolocation) {
     alert("⚠️ متصفحك لا يدعم تحديد الموقع");
