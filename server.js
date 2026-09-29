@@ -21,6 +21,8 @@ app.set("io", io);
 // ═══ مسح قاعدة البيانات (للاختبار) ═══
 
 
+app.use("/api/auth", authRoutes);
+app.use("/api/rides", rideRoutes);
 // ═══ MongoDB ═══
 console.log("🔄 Attempting MongoDB connection...");
 console.log("📍 MONGO_URI:", process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 60) + "..." : "❌ MISSING!");
