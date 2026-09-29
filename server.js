@@ -19,20 +19,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("io", io);
 
 // ═══ مسح قاعدة البيانات (للاختبار) ═══
-app.get("/admin/reset-db", async (req, res) => {
-  try {
-    const users = await User.countDocuments();
-    const rides = await Ride.countDocuments();
-    await User.deleteMany({});
-    await Ride.deleteMany({});
-    res.json({ success: true, message: `✅ تم مسح ${users} مستخدم و ${rides} رحلة` });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
-app.use("/api/auth", authRoutes);
-app.use("/api/rides", rideRoutes);
 
 // ═══ MongoDB ═══
 console.log("🔄 Attempting MongoDB connection...");
