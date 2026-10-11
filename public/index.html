@@ -374,7 +374,13 @@ let currentRideId = null;
 let customerGPSMarker = null;
 let customerGPSLat = null, customerGPSLng = null;
 
-function initCustomerApp() {
+ 
+  
+   
+    
+     
+ 
+  function initCustomerApp() {
   if (customerMap) return;
   socket = io();
 
@@ -382,43 +388,43 @@ function initCustomerApp() {
   addMapLayers(customerMap);
 
   // ═══ تحديد موقع الزبون تلقائياً ═══
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      customerGPSLat = pos.coords.latitude;
-      customerGPSLng = pos.coords.longitude;
-      
-      if (customerGPSMarker) {
-        customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
-      } else {
-        const myIcon = L.divIcon({
-          html: `<div style="...">📍</div>`,
-          className: "",
-          iconSize: [36, 36],
-          iconAnchor: [18, 18]
-        });
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        customerGPSLat = pos.coords.latitude;
+        customerGPSLng = pos.coords.longitude;
         
-        customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon })
-          .addTo(customerMap)
-          .bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
+        if (customerGPSMarker) {
+          customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
+        } else {
+          const myIcon = L.divIcon({
+            html: '<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>',
+            className: "",
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+          });
+          
+          customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon })
+            .addTo(customerMap)
+            .bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
+          
+          customerMap.setView([customerGPSLat, customerGPSLng], 15);
+        }
         
-        customerMap.setView([customerGPSLat, customerGPSLng], 15);
-      }
-      
-      // ⚠️ تحديد موقع الزبون تلقائياً كنقطة انطلاق
-      if (customerPoints.length === 0 && !currentRideId) {
-        addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
-        notify("✅ تم تحديد موقعك تلقائياً كنقطة انطلاق");
-      }
-    },
-    (err) => {
-      console.error("GPS:", err);
-      document.getElementById("customer-hint").textContent = 
-        "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-  );
-} 
+        if (customerPoints.length === 0 && !currentRideId) {
+          addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
+          notify("✅ تم تحديد موقعك تلقائياً كنقطة انطلاق");
+        }
+      },
+      (err) => {
+        console.error("GPS:", err);
+        document.getElementById("customer-hint").textContent = 
+          "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
   // ═══ زر استخدام موقعي ═══
   const useMyLocationBtn = document.createElement("button");
   useMyLocationBtn.id = "use-my-location";
@@ -466,10 +472,9 @@ if (navigator.geolocation) {
       results.forEach(r => {
         const div = document.createElement("div");
         div.className = "search-result-item";
-        div.innerHTML = `
-          <div class="title">📍 ${r.name}</div>
-          <div class="subtitle">${r.fullName.substring(0, 80)}...</div>
-        `;
+        div.innerHTML = 
+          '<div class="title">📍 ' + r.name + '</div>' +
+          '<div class="subtitle">' + r.fullName.substring(0, 80) + '...</div>';
         div.onclick = () => selectSearchResult(r);
         searchResults.appendChild(div);
       });
@@ -488,7 +493,7 @@ if (navigator.geolocation) {
     drivers.forEach(driver => {
       const color = driver.busy ? '#dc3545' : '#28a745';
       const icon = L.divIcon({ 
-        html: `<div style="background:${color};color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">🚗</div>`,
+        html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">🚗</div>',
         className: "",
         iconSize: [40, 40],
         iconAnchor: [20, 20]
@@ -499,7 +504,7 @@ if (navigator.geolocation) {
       } else {
         driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon })
           .addTo(customerMap)
-          .bindPopup(`<b>🚗 ${driver.name}</b><br>${driver.carModel} — ${driver.carPlate}<br><span class="driver-badge ${driver.busy ? 'busy' : ''}">${driver.busy ? 'مشغول' : 'متاح'}</span>`);
+          .bindPopup('<b>🚗 ' + driver.name + '</b><br>' + driver.carModel + ' — ' + driver.carPlate);
       }
     });
   });
@@ -511,40 +516,37 @@ if (navigator.geolocation) {
   });
 
   socket.on("search-started", ({ rideId, driversOnline }) => {
-    document.getElementById("ride-status").innerHTML = `
-      <div class="searching">
-        <div class="spinner"></div>
-        <p style="margin-top:15px"><b>⏳ جاري البحث عن سائق...</b></p>
-        <p style="color:#666;font-size:14px;margin-top:5px">${driversOnline} سائق متصل</p>
-        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
-      </div>
-    `;
+    document.getElementById("ride-status").innerHTML = 
+      '<div class="searching">' +
+        '<div class="spinner"></div>' +
+        '<p style="margin-top:15px"><b>⏳ جاري البحث عن سائق...</b></p>' +
+        '<p style="color:#666;font-size:14px;margin-top:5px">' + driversOnline + ' سائق متصل</p>' +
+        '<button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>' +
+      '</div>';
   });
 
   socket.on("search-restarted", ({ message }) => {
-    document.getElementById("ride-status").innerHTML = `
-      <div class="searching">
-        <div class="spinner"></div>
-        <p style="margin-top:15px"><b>${message}</b></p>
-        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
-      </div>
-    `;
+    document.getElementById("ride-status").innerHTML = 
+      '<div class="searching">' +
+        '<div class="spinner"></div>' +
+        '<p style="margin-top:15px"><b>' + message + '</b></p>' +
+        '<button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>' +
+      '</div>';
     notify(message);
   });
 
   socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
-    document.getElementById("ride-status").innerHTML = `
-      <div class="info-card">
-        <h4>✅ السائق في الطريق إليك</h4>
-        <p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">${etaMin} دقيقة</span></p>
-        <p><b>👤 الاسم:</b> ${driver.name}</p>
-        <p><b>📞 الهاتف:</b> ${driver.phone}</p>
-        <p><b>🚗 السيارة:</b> ${driver.carModel}</p>
-        <p><b>🔢 اللوحة:</b> ${driver.carPlate}</p>
-        <a href="tel:${driver.phone}" class="btn-call">📞 اتصال</a>
-        <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button>
-      </div>
-    `;
+    document.getElementById("ride-status").innerHTML = 
+      '<div class="info-card">' +
+        '<h4>✅ السائق في الطريق إليك</h4>' +
+        '<p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">' + etaMin + ' دقيقة</span></p>' +
+        '<p><b>👤 الاسم:</b> ' + driver.name + '</p>' +
+        '<p><b>📞 الهاتف:</b> ' + driver.phone + '</p>' +
+        '<p><b>🚗 السيارة:</b> ' + driver.carModel + '</p>' +
+        '<p><b>🔢 اللوحة:</b> ' + driver.carPlate + '</p>' +
+        '<a href="tel:' + driver.phone + '" class="btn-call">📞 اتصال</a>' +
+        '<button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button>' +
+      '</div>';
   });
 
   socket.on("ride-cancelled", ({ rideId }) => {
@@ -553,11 +555,9 @@ if (navigator.geolocation) {
     currentRideId = null;
   });
 
-  // ═══ النقر على الخريطة ═══
   customerMap.on("click", (e) => {
     if (currentRideId) return;
     if (customerPoints.length >= 2) return;
-    
     addCustomerPoint(e.latlng.lat, e.latlng.lng);
   });
 
