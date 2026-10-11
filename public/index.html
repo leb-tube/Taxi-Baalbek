@@ -518,6 +518,12 @@ let customerGPSLat = null, customerGPSLng = null;
 
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(customerMap);
+ // ═══ تحميل POI عند الحركة والزوم ═══
+  customerMap.on("moveend", () => loadPOIs(customerMap));
+  customerMap.on("zoomend", () => loadPOIs(customerMap));
+  
+  // تحميل أولي بعد 2 ثانية
+  setTimeout(() => loadPOIs(customerMap), 2000);
 
   // ═══ تحديد موقع الزبون تلقائياً ═══
   if (navigator.geolocation) {
@@ -819,6 +825,11 @@ function initDriverApp() {
 
   driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(driverMap);
+ // ═══ تحميل POI عند الحركة والزوم ═══
+  driverMap.on("moveend", () => loadPOIs(driverMap));
+  driverMap.on("zoomend", () => loadPOIs(driverMap));
+  
+  setTimeout(() => loadPOIs(driverMap), 2000);
 
   if (!navigator.geolocation) {
     alert("⚠️ متصفحك لا يدعم تحديد الموقع");
