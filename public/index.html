@@ -260,7 +260,29 @@ const satelliteLayer = L.tileLayer(
     maxNativeZoom: 17 // آخر مستوى تدعمه الصور، سيقوم Leaflet بتمديده بعد ذلك
   }
 );
+ const hybridLayer = L.layerGroup([
+    satelliteLayer,
+    L.tileLayer(
+      "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
+      { 
+        attribution: "© Esri", 
+        maxZoom: 22, 
+        maxNativeZoom: 17 
+      }
+    )
+  ]);
 
+  streetsLayer.addTo(map);
+
+  L.control.layers({
+    "🗺️ شوارع": streetsLayer,
+    "🛰️ قمر صناعي": satelliteLayer,
+    "🌍 هجين": hybridLayer
+  }, null, {
+    position: "topright",
+    collapsed: false
+  }).addTo(map);
+}
 leLayer(
     "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
     { 
