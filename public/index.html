@@ -316,17 +316,19 @@ function addMapLayers(map) {
     }
   );
 
-  const hybridLayer = L.layerGroup([
+ // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
+const hybridLayer = L.layerGroup([
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
   ),
   L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
     { 
-      attribution: "© CartoDB", 
-      maxZoom: 19,
-      subdomains: "abcd"
+      attribution: "© Esri", 
+      maxZoom: 22, 
+      maxNativeZoom: 17,
+      opacity: 0.9
     }
   )
 ]);
