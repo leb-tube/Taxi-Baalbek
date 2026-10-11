@@ -415,7 +415,88 @@ async function searchAddress(query) {
     return [];
   }
 }
-
+// ═══ إضافة POI من OpenStreetMap (Overpass API) ═══
+async function loadPOIs(map) {
+  const bounds = map.getBounds();
+  const south = bounds.getSouth();
+  const west = bounds.getWest();
+  const north = bounds.getNorth();
+  const east = bounds.getEast();
+  
+  const zoom = map.getZoom();
+  if (zoom < 14) return;
+  
+  const query = `
+    [out:json][timeout:10];
+    (
+      node["amenity"~"restaurant|cafe|fast_food|hospital|pharmacy|fuel|bank|atm|police|school|university"](${south},${west},${north},${east});
+      node["tourism"~"hotel|motel|guest_house"](${south},${west},${north},${east});
+    );
+    out body 100;
+  `;
+  
+  try {
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: "data=" + encodeURIComponent(query)
+    });
+    
+    const data = await res.json();
+    
+    if (window.poiLayer) {
+      map.removeLayer(window.poiLayer);
+    }
+    
+    window.poiLayer = L.layerGroup().addTo(map);
+    
+    data.elements.forEach(el => {
+      if (!el.lat || !el.lon) return;
+      
+      const type = el.tags.amenity || el.tags.tourism;
+      const name = el.tags.name || el.tags["name:ar"] || el.tags["name:en"];
+      if (!name) return;
+      
+      const icons = {
+        restaurant: "🍽️",
+        cafe: "☕",
+        fast_food: "🍔",
+        hospital: "🏥",
+        pharmacy: "💊",
+        fuel: "⛽",
+        bank: "🏦",
+        atm: "💳",
+        police: "🚔",
+        school: "🏫",
+        university: "🎓",
+        hotel: "🏨",
+        motel: "🏨",
+        guest_house: "🏠"
+      };
+      
+      const icon = icons[type] || "📍";
+      
+      const marker = L.marker([el.lat, el.lon], {
+        icon: L.divIcon({
+          html: '<div style="font-size:20px;text-shadow:0 1px 2px rgba(0,0,0,.5)">' + icon + '</div>',
+          className: "",
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        })
+      });
+      
+      marker.bindPopup(
+        '<b>' + icon + ' ' + name + '</b><br>' +
+        '<small>' + (el.tags["addr:street"] || "") + '</small>'
+      );
+      
+      window.poiLayer.addLayer(marker);
+    });
+    
+    console.log("✅ Loaded " + data.elements.length + " POIs");
+  } catch (err) {
+    console.error("Overpass error:", err);
+  }
+}
 // ═══════════════════════════════════════
 // 🧍 تطبيق الزبون
 // ═══════════════════════════════════════
