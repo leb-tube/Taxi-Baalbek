@@ -20,7 +20,37 @@ app.set("io", io);
 
 // ═══ مسح قاعدة البيانات (للاختبار) ═══
 
-
+// ═══ Proxy للبحث بالعنوان ═══
+app.get("/api/search", async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query || query.length < 3) {
+      return res.json([]);
+    }
+    
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=lb&limit=8&addressdetails=1&accept-language=ar`;
+    
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "TaxiBaalbek/1.0 (contact@taxi-baalbek.onrender.com)"
+      }
+    });
+    
+    const data = await response.json();
+    
+    const results = data.map(item => ({
+      name: item.display_name.split(",")[0],
+      fullName: item.display_name,
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon)
+    }));
+    
+    res.json(results);
+  } catch (err) {
+    console.error("Search error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
 // ═══ MongoDB ═══

@@ -317,16 +317,19 @@ function addMapLayers(map) {
   );
 
   const hybridLayer = L.layerGroup([
-    satelliteLayer,
-    L.tileLayer(
-      "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
-      { 
-        attribution: "© Esri", 
-        maxZoom: 22, 
-        maxNativeZoom: 17 
-      }
-    )
-  ]);
+  L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
+  ),
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+    { 
+      attribution: "© CartoDB", 
+      maxZoom: 19,
+      subdomains: "abcd"
+    }
+  )
+]);
 
   streetsLayer.addTo(map);
 
@@ -347,21 +350,15 @@ async function searchAddress(query) {
   if (!query || query.length < 3) return [];
   
   try {
-    const url = `https://nominatim.openstreetmap.org/search?` +
-      `format=json&q=${encodeURIComponent(query)}&` +
-      `countrycodes=lb&limit=8&addressdetails=1&accept-language=ar`;
+    // ⚠️ نستخدم السيرفر كوسيط (proxy)
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     
-    const res = await fetch(url, {
-      headers: { "User-Agent": "TaxiBaalbek/1.0" }
-    });
+    if (!res.ok) {
+      console.error("Search server error:", res.status);
+      return [];
+    }
     
-    const data = await res.json();
-    return data.map(item => ({
-      name: item.display_name.split(",")[0],
-      fullName: item.display_name,
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon)
-    }));
+    return await res.json();
   } catch (err) {
     console.error("Search error:", err);
     return [];
@@ -391,37 +388,28 @@ function initCustomerApp() {
         customerGPSLat = pos.coords.latitude;
         customerGPSLng = pos.coords.longitude;
         
-        if (customerGPSMarker) {
-          customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
-        } else {
-          const myIcon = L.divIcon({
-            html: `<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>`,
-            className: "",
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
-          });
-          
-          customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon })
-            .addTo(customerMap)
-            .bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
-          
-          customerMap.setView([customerGPSLat, customerGPSLng], 15);
-        }
-        
-        // تحديث التلميح
-        if (customerPoints.length === 0) {
-          document.getElementById("customer-hint").textContent = 
-            "✅ تم تحديد موقعك — اضغط على 'استخدام موقعي' أو انقر على الخريطة";
-        }
-      },
-      (err) => {
-        console.error("GPS:", err);
-        document.getElementById("customer-hint").textContent = 
-          "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  }
+       if (customerGPSMarker) {
+  customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
+} else {
+  const myIcon = L.divIcon({
+    html: `<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>`,
+    className: "",
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
+  });
+  
+  customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon })
+    .addTo(customerMap)
+    .bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
+  
+  customerMap.setView([customerGPSLat, customerGPSLng], 15);
+}
+
+// ⚠️ تحديد موقع الزبون تلقائياً كنقطة انطلاق (إن لم تكن هناك نقاط)
+if (customerPoints.length === 0 && !currentRideId) {
+  addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
+  notify("✅ تم تحديد موقعك تلقائياً كنقطة انطلاق");
+}
   
   // ═══ زر استخدام موقعي ═══
   const useMyLocationBtn = document.createElement("button");
