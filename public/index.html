@@ -308,11 +308,16 @@ routeByRole();
 // 🗺️ دالة إضافة الطبقات
 // ═══════════════════════════════════════
 function addMapLayers(map) {
+  // ═══ 1. Streets (OpenStreetMap) ═══
   const streetsLayer = L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    { attribution: "© OpenStreetMap", maxZoom: 19 }
+    { 
+      attribution: "© OpenStreetMap", 
+      maxZoom: 19 
+    }
   );
 
+  // ═══ 2. Satellite (Esri) ═══
   const satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { 
@@ -322,51 +327,63 @@ function addMapLayers(map) {
     }
   );
 
- // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
-// ═══ Hybrid: قمر صناعي + أسماء شوارع و POI ═══
-// ✅ Domain Auth: taxi-baalbek.onrender.com (بدون مفتاح)
-const hybridLayer = L.layerGroup([
-  // 1. القمر الصناعي
-  L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
-  ),
+  // ═══ 3. Hybrid: Satellite + Street Names + POI ═══
+  const STADIA_KEY = "b18cfa9d-bf29-4c96-9ecf-ddb7738d12f5";
   
-  // 2. أسماء المدن الكبيرة (Esri)
-  L.tileLayer(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.85 }
-  ),
-  
-  // 3. أسماء الشوارع + المطاعم + الفنادق (Stadia - Domain Auth)
-  L.tileLayer(
-    "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png",
-    { 
-      attribution: "© Stadia Maps, © Stamen",
-      maxZoom: 20,
-      subdomains: "abcd",
-      opacity: 0.9
-    }
-  )
-]);
+  const hybridLayer = L.layerGroup([
+    // 3.1. Satellite imagery
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { 
+        attribution: "© Esri", 
+        maxZoom: 22, 
+        maxNativeZoom: 17 
+      }
+    ),
+    
+    // 3.2. City/Country names (Esri)
+    L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      { 
+        attribution: "© Esri", 
+        maxZoom: 22, 
+        maxNativeZoom: 17, 
+        opacity: 0.9
+      }
+    ),
+    
+    // 3.3. Streets + POI names (Stadia - with API Key)
+    L.tileLayer(
+      "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png?api_key=" + STADIA_KEY,
+      { 
+        attribution: "© Stadia Maps, © Stamen",
+        maxZoom: 20,
+        subdomains: "abcd",
+        opacity: 0.9
+      }
+    )
+  ]);
 
+  // ═══ Default layer ═══
   streetsLayer.addTo(map);
-L.control.layers({
-  "🗺️ شوارع": streetsLayer,
-  "🛰️ قمر صناعي": satelliteLayer,
-  "🌍 هجين": hybridLayer
-}, null, {
-  position: "topright",
-  collapsed: false
-}).addTo(map);
 
-// ⚠️ تحريك زر الطبقات لأسفل
-setTimeout(() => {
-  const layersControl = document.querySelector('.leaflet-control-layers');
-  if (layersControl) {
-    layersControl.style.marginTop = '70px';
-  }
-}, 100);
+  // ═══ Layer switcher ═══
+  L.control.layers({
+    "🗺️ شوارع": streetsLayer,
+    "🛰️ قمر صناعي": satelliteLayer,
+    "🌍 هجين": hybridLayer
+  }, null, {
+    position: "topright",
+    collapsed: false
+  }).addTo(map);
+
+  // ═══ Move layers button down ═══
+  setTimeout(function() {
+    const layersControl = document.querySelector('.leaflet-control-layers');
+    if (layersControl) {
+      layersControl.style.marginTop = '70px';
+    }
+  }, 100);
 }
 
 // ═══════════════════════════════════════
