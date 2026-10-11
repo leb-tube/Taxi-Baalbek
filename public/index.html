@@ -323,6 +323,8 @@ function addMapLayers(map) {
   );
 
  // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
+const STADIA_KEY = "cc1dee56-7129-4bde-a826-9b8164e5645e";
+
 const hybridLayer = L.layerGroup([
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -333,12 +335,12 @@ const hybridLayer = L.layerGroup([
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.85 }
   ),
   L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+    `https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png?api_key=${STADIA_KEY}`,
     { 
-      attribution: "© OpenStreetMap, © CartoDB",
-      maxZoom: 19,
+      attribution: "© Stadia Maps, © Stamen",
+      maxZoom: 20,
       subdomains: "abcd",
-      opacity: 0.8
+      opacity: 0.85
     }
   )
 ]);
