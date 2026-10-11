@@ -283,29 +283,7 @@ const satelliteLayer = L.tileLayer(
     collapsed: false
   }).addTo(map);
 }
-leLayer(
-    "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
-    { 
-      attribution: "© Esri", 
-      maxZoom: 22, 
-      maxNativeZoom: 17 
-    }
-  )
-]);
 
-  // الخريطة الافتراضية
-  streetsLayer.addTo(map);
-
-  // زر التبديل
-  L.control.layers({
-    "🗺️ شوارع": streetsLayer,
-    "🛰️ قمر صناعي": satelliteLayer,
-    "🌍 هجين": hybridLayer
-  }, null, {
-    position: "topright",
-    collapsed: false
-  }).addTo(map);
-}
 function initCustomerApp() {
   if (customerMap) return;
   socket = io();
@@ -662,3 +640,4 @@ window.completeRide = () => {
 </script>
 </body>
 </html>
+
