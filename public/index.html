@@ -574,22 +574,34 @@ if (customerPoints.length === 0 && !currentRideId) {
 function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length >= 2) return;
   
-  customerPoints.push({ lat, lng, label: label || "" });
+  customerPoints.push({
+    lat: lat,
+    lng: lng,
+    label: label || ""
+  });
   
   const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
-  const markerLabel = label ? `📍 ${label}` : defaultLabel;
+  const markerLabel = label ? "📍 " + label : defaultLabel;
   
-  customerMarkers.push(
-    L.marker([lat, lng]).addTo(customerMap).bindPopup(markerLabel).openPopup()
-  );
+  const newMarker = L.marker([lat, lng])
+    .addTo(customerMap)
+    .bindPopup(markerLabel)
+    .openPopup();
+  
+  customerMarkers.push(newMarker);
   
   if (customerPoints.length === 2) {
     document.getElementById("request-btn").disabled = false;
-    L.polyline(customerPoints.map(p => [p.lat, p.lng]), { color: "blue", weight: 4 }).addTo(customerMap);
+    
+    const linePoints = customerPoints.map(function(p) {
+      return [p.lat, p.lng];
+    });
+    
+    L.polyline(linePoints, { color: "blue", weight: 4 }).addTo(customerMap);
     document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
   } else {
     document.getElementById("customer-hint").textContent = 
-      "🎯 حدد الوجهة — انقر على الخريطة، أو استخدم 'استخدام موقعي'، أو ابحث بالعنوان";
+      "🎯 حدد الوجهة — انقر على الخريطة، أو استخدم موقعي، أو ابحث بالعنوان";
   }
 }
 
