@@ -324,30 +324,21 @@ function addMapLayers(map) {
 
  // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
 const hybridLayer = L.layerGroup([
-  // 1. القمر الصناعي
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
   ),
-  
-  // 2. أسماء Esri
   L.tileLayer(
     "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    { 
-      attribution: "© Esri", 
-      maxZoom: 22, 
-      maxNativeZoom: 17,
-      opacity: 0.85
-    }
+    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.85 }
   ),
-  
-  // 3. أسماء OSM (بديل مجاني بدون تسجيل)
   L.tileLayer(
-    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
     { 
-      attribution: "© OpenStreetMap",
+      attribution: "© OpenStreetMap, © CartoDB",
       maxZoom: 19,
-      opacity: 0.0  // ← شفاف تماماً (لا نريد صورة الشوارع، فقط... لا شيء)
+      subdomains: "abcd",
+      opacity: 0.8
     }
   )
 ]);
