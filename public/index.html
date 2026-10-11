@@ -416,6 +416,7 @@ async function searchAddress(query) {
   }
 }
 // ═══ إضافة POI من OpenStreetMap (Overpass API) ═══
+// ═══ إضافة POI من OpenStreetMap (عبر السيرفر) ═══
 async function loadPOIs(map) {
   const bounds = map.getBounds();
   const south = bounds.getSouth();
@@ -426,29 +427,41 @@ async function loadPOIs(map) {
   const zoom = map.getZoom();
   if (zoom < 14) return;
   
-  const query = `
-    [out:json][timeout:10];
-    (
-      node["amenity"~"restaurant|cafe|fast_food|hospital|pharmacy|fuel|bank|atm|police|school|university"](${south},${west},${north},${east});
-      node["tourism"~"hotel|motel|guest_house"](${south},${west},${north},${east});
-    );
-    out body 100;
-  `;
+  const query = `[out:json][timeout:25];
+(
+  node["amenity"~"restaurant|cafe|fast_food|hospital|pharmacy|fuel|bank|police"](${south},${west},${north},${east});
+  node["tourism"~"hotel|guest_house|hostel"](${south},${west},${north},${east});
+);
+out body 100;`;
   
   try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
+    // ⚠️ عبر السيرفر (proxy) بدل Overpass مباشرة
+    const res = await fetch("/api/pois", {
       method: "POST",
-      body: "data=" + encodeURIComponent(query)
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query })
     });
+    
+    if (!res.ok) {
+      console.error("POI server error:", res.status);
+      return;
+    }
     
     const data = await res.json();
     
+    if (!data.elements) {
+      console.error("Invalid POI response");
+      return;
+    }
+    
+    // امسح POI القديمة
     if (window.poiLayer) {
       map.removeLayer(window.poiLayer);
     }
     
     window.poiLayer = L.layerGroup().addTo(map);
     
+    let count = 0;
     data.elements.forEach(el => {
       if (!el.lat || !el.lon) return;
       
@@ -464,23 +477,20 @@ async function loadPOIs(map) {
         pharmacy: "💊",
         fuel: "⛽",
         bank: "🏦",
-        atm: "💳",
         police: "🚔",
-        school: "🏫",
-        university: "🎓",
         hotel: "🏨",
-        motel: "🏨",
-        guest_house: "🏠"
+        guest_house: "🏠",
+        hostel: "🏨"
       };
       
       const icon = icons[type] || "📍";
       
       const marker = L.marker([el.lat, el.lon], {
         icon: L.divIcon({
-          html: '<div style="font-size:20px;text-shadow:0 1px 2px rgba(0,0,0,.5)">' + icon + '</div>',
+          html: '<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.7);background:rgba(255,255,255,.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">' + icon + '</div>',
           className: "",
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         })
       });
       
@@ -490,11 +500,12 @@ async function loadPOIs(map) {
       );
       
       window.poiLayer.addLayer(marker);
+      count++;
     });
     
-    console.log("✅ Loaded " + data.elements.length + " POIs");
+    console.log("✅ Loaded " + count + " POIs");
   } catch (err) {
-    console.error("Overpass error:", err);
+    console.error("Overpass error:", err.message);
   }
 }
 // ═══════════════════════════════════════

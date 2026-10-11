@@ -19,7 +19,58 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("io", io);
 
 // ═══ مسح قاعدة البيانات (للاختبار) ═══
-
+// ═══ Proxy لـ Overpass API (POI) ═══
+app.post("/api/pois", async (req, res) => {
+  try {
+    const query = req.body.query;
+    if (!query) return res.status(400).json({ error: "Query required" });
+    
+    // سيرفرات Overpass البديلة
+    const servers = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.openstreetmap.ru/api/interpreter"
+    ];
+    
+    let lastError = null;
+    
+    for (const server of servers) {
+      try {
+        const response = await fetch(server, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "TaxiBaalbek/1.0"
+          },
+          body: "data=" + encodeURIComponent(query)
+        });
+        
+        if (!response.ok) {
+          lastError = "Server " + server + " returned " + response.status;
+          continue;
+        }
+        
+        const text = await response.text();
+        
+        // تحقق أنه JSON (ليس XML)
+        if (text.trim().startsWith("<")) {
+          lastError = "Server " + server + " returned XML (error)";
+          continue;
+        }
+        
+        const data = JSON.parse(text);
+        return res.json(data);
+      } catch (err) {
+        lastError = err.message;
+        continue;
+      }
+    }
+    
+    res.status(500).json({ error: "All Overpass servers failed: " + lastError });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ═══ Proxy للبحث بالعنوان ═══
 app.get("/api/search", async (req, res) => {
   try {
