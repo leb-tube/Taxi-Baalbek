@@ -252,18 +252,22 @@ function addMapLayers(map) {
     { attribution: "© OpenStreetMap", maxZoom: 19 }
   );
 
-  const satelliteLayer = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "© Esri", maxZoom: 19 }
-  );
+const satelliteLayer = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { 
+    attribution: "© Esri", 
+    maxZoom: 22, // الحد الأقصى الذي يمكن للمستخدم التكبير إليه
+    maxNativeZoom: 17 // آخر مستوى تدعمه الصور، سيقوم Leaflet بتمديده بعد ذلك
+  }
+);
 
-  const hybridLayer = L.layerGroup([
-    satelliteLayer,
-    L.tileLayer(
-      "https://stamen-tiles-{s}.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
-      { attribution: "© Stamen", maxZoom: 19, opacity: 0.7 }
-    )
-  ]);
+ const hybridLayer = L.layerGroup([
+  satelliteLayer, // طبقة القمر الصناعي
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", // طبقة الأسماء فقط
+    { attribution: "© OpenStreetMap, © CartoDB", maxZoom: 22, maxNativeZoom: 18 }
+  )
+]);
 
   // الخريطة الافتراضية
   streetsLayer.addTo(map);
