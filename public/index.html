@@ -60,6 +60,60 @@ input:focus { outline: none; border-color: #ffc107; }
 .searching { text-align: center; padding: 20px; }
 .searching .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #ffc107; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ═══ مربع البحث ═══ */
+.search-box {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  width: calc(100% - 100px);
+  max-width: 400px;
+  display: none;
+}
+.search-box.active { display: block; }
+.search-box input {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: Tahoma, sans-serif;
+  margin: 0;
+}
+.search-box input:focus { outline: 2px solid #ffc107; }
+.search-results {
+  max-height: 250px;
+  overflow-y: auto;
+  border-top: 1px solid #eee;
+}
+.search-result-item {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  transition: .2s;
+}
+.search-result-item:hover { background: #fffbea; }
+.search-result-item .title { font-weight: bold; color: #111; margin-bottom: 3px; }
+.search-result-item .subtitle { color: #666; font-size: 12px; }
+.search-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 999;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.map-wrapper { position: relative; }
 </style>
 </head>
 <body>
@@ -108,9 +162,16 @@ input:focus { outline: none; border-color: #ffc107; }
     <span>🧍 مرحباً، <b id="customer-name"></b></span>
     <button class="btn-logout" onclick="logout()">خروج</button>
   </header>
-  <div id="customer-map"></div>
+  <div class="map-wrapper">
+    <div id="customer-map"></div>
+    <button class="search-toggle" id="search-toggle" title="بحث بالعنوان">🔍</button>
+    <div class="search-box" id="search-box">
+      <input type="text" id="search-input" placeholder="اكتب اسم مكان... (مطعم، فندق، شارع)">
+      <div class="search-results" id="search-results"></div>
+    </div>
+  </div>
   <div class="bottom-panel">
-    <div id="customer-hint">📍 اضغط على الخريطة لتحديد نقطة الانطلاق ثم الوجهة</div>
+    <div id="customer-hint">📍 جاري تحديد موقعك...</div>
     <div class="actions" id="customer-actions">
       <button class="btn-secondary" onclick="clearSelection()">مسح</button>
       <button class="btn-primary" id="request-btn" disabled>اطلب تاكسي</button>
@@ -238,13 +299,7 @@ document.getElementById("register-form").onsubmit = async (e) => {
 routeByRole();
 
 // ═══════════════════════════════════════
-// 🧍 تطبيق الزبون
-// ═══════════════════════════════════════
-let customerMap, customerMarkers = [], customerPoints = [], socket;
-let driversMarkers = {};
-let currentRideId = null;
-// ═══════════════════════════════════════
-// 🗺️ دالة إنشاء الطبقات (للاستخدام في الخريطتين)
+// 🗺️ دالة إضافة الطبقات
 // ═══════════════════════════════════════
 function addMapLayers(map) {
   const streetsLayer = L.tileLayer(
@@ -252,15 +307,16 @@ function addMapLayers(map) {
     { attribution: "© OpenStreetMap", maxZoom: 19 }
   );
 
-const satelliteLayer = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { 
-    attribution: "© Esri", 
-    maxZoom: 22, // الحد الأقصى الذي يمكن للمستخدم التكبير إليه
-    maxNativeZoom: 17 // آخر مستوى تدعمه الصور، سيقوم Leaflet بتمديده بعد ذلك
-  }
-);
- const hybridLayer = L.layerGroup([
+  const satelliteLayer = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { 
+      attribution: "© Esri", 
+      maxZoom: 22,
+      maxNativeZoom: 17
+    }
+  );
+
+  const hybridLayer = L.layerGroup([
     satelliteLayer,
     L.tileLayer(
       "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
@@ -284,13 +340,147 @@ const satelliteLayer = L.tileLayer(
   }).addTo(map);
 }
 
+// ═══════════════════════════════════════
+// 🔍 دالة البحث بالعنوان (Nominatim)
+// ═══════════════════════════════════════
+async function searchAddress(query) {
+  if (!query || query.length < 3) return [];
+  
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `format=json&q=${encodeURIComponent(query)}&` +
+      `countrycodes=lb&limit=8&addressdetails=1&accept-language=ar`;
+    
+    const res = await fetch(url, {
+      headers: { "User-Agent": "TaxiBaalbek/1.0" }
+    });
+    
+    const data = await res.json();
+    return data.map(item => ({
+      name: item.display_name.split(",")[0],
+      fullName: item.display_name,
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon)
+    }));
+  } catch (err) {
+    console.error("Search error:", err);
+    return [];
+  }
+}
+
+// ═══════════════════════════════════════
+// 🧍 تطبيق الزبون
+// ═══════════════════════════════════════
+let customerMap, customerMarkers = [], customerPoints = [], socket;
+let driversMarkers = {};
+let currentRideId = null;
+let customerGPSMarker = null;
+let customerGPSLat = null, customerGPSLng = null;
+
 function initCustomerApp() {
   if (customerMap) return;
   socket = io();
 
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
- addMapLayers(customerMap);
+  addMapLayers(customerMap);
 
+  // ═══ تحديد موقع الزبون تلقائياً ═══
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        customerGPSLat = pos.coords.latitude;
+        customerGPSLng = pos.coords.longitude;
+        
+        if (customerGPSMarker) {
+          customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
+        } else {
+          const myIcon = L.divIcon({
+            html: `<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>`,
+            className: "",
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+          });
+          
+          customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon })
+            .addTo(customerMap)
+            .bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
+          
+          customerMap.setView([customerGPSLat, customerGPSLng], 15);
+        }
+        
+        // تحديث التلميح
+        if (customerPoints.length === 0) {
+          document.getElementById("customer-hint").textContent = 
+            "✅ تم تحديد موقعك — اضغط على 'استخدام موقعي' أو انقر على الخريطة";
+        }
+      },
+      (err) => {
+        console.error("GPS:", err);
+        document.getElementById("customer-hint").textContent = 
+          "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+  
+  // ═══ زر استخدام موقعي ═══
+  const useMyLocationBtn = document.createElement("button");
+  useMyLocationBtn.id = "use-my-location";
+  useMyLocationBtn.className = "btn-secondary";
+  useMyLocationBtn.textContent = "📍 استخدام موقعي";
+  useMyLocationBtn.style.cssText = "flex:1;background:#007bff;color:#fff;margin-left:5px";
+  useMyLocationBtn.onclick = useMyLocation;
+  
+  const actionsDiv = document.getElementById("customer-actions");
+  actionsDiv.appendChild(useMyLocationBtn);
+
+  // ═══ مربع البحث ═══
+  const searchToggle = document.getElementById("search-toggle");
+  const searchBox = document.getElementById("search-box");
+  const searchInput = document.getElementById("search-input");
+  const searchResults = document.getElementById("search-results");
+  
+  searchToggle.onclick = () => {
+    searchBox.classList.toggle("active");
+    if (searchBox.classList.contains("active")) {
+      setTimeout(() => searchInput.focus(), 100);
+    }
+  };
+  
+  let searchTimeout;
+  searchInput.oninput = (e) => {
+    clearTimeout(searchTimeout);
+    const q = e.target.value.trim();
+    
+    if (q.length < 3) {
+      searchResults.innerHTML = "";
+      return;
+    }
+    
+    searchTimeout = setTimeout(async () => {
+      searchResults.innerHTML = '<div style="padding:12px;text-align:center;color:#666">🔍 جاري البحث...</div>';
+      const results = await searchAddress(q);
+      
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div style="padding:12px;text-align:center;color:#999">لا توجد نتائج</div>';
+        return;
+      }
+      
+      searchResults.innerHTML = "";
+      results.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "search-result-item";
+        div.innerHTML = `
+          <div class="title">📍 ${r.name}</div>
+          <div class="subtitle">${r.fullName.substring(0, 80)}...</div>
+        `;
+        div.onclick = () => selectSearchResult(r);
+        searchResults.appendChild(div);
+      });
+    }, 500);
+  };
+
+  // ═══ استقبال السائقين ═══
   socket.on("drivers-list-update", (drivers) => {
     const currentIds = new Set(drivers.map(d => d.id));
     for (const id in driversMarkers) {
@@ -346,7 +536,6 @@ function initCustomerApp() {
     notify(message);
   });
 
-  // ⚠️ بيانات السائق تصل مباشرة من السيرفر
   socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
     document.getElementById("ride-status").innerHTML = `
       <div class="info-card">
@@ -368,34 +557,19 @@ function initCustomerApp() {
     currentRideId = null;
   });
 
-  socket.on("no-drivers", () => {
-    document.getElementById("ride-status").innerHTML = `
-      <div class="searching">
-        <p style="color:#856404;background:#fff3cd;padding:12px;border-radius:8px">⚠️ لا سائق متاح حالياً — سيتم الإشعار عند توفر سائق</p>
-        <button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>
-      </div>
-    `;
-  });
-
+  // ═══ النقر على الخريطة ═══
   customerMap.on("click", (e) => {
     if (currentRideId) return;
     if (customerPoints.length >= 2) return;
-    customerPoints.push(e.latlng);
-    const label = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
-    customerMarkers.push(L.marker(e.latlng).addTo(customerMap).bindPopup(label).openPopup());
     
-    if (customerPoints.length === 2) {
-      document.getElementById("request-btn").disabled = false;
-      L.polyline(customerPoints, { color: "blue", weight: 4 }).addTo(customerMap);
-      document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
-    }
+    addCustomerPoint(e.latlng.lat, e.latlng.lng);
   });
 
   document.getElementById("request-btn").onclick = async () => {
     const body = { 
       customerId: API.user.id, 
-      from: { lat: customerPoints[0].lat, lng: customerPoints[0].lng, address: "نقطة الانطلاق" }, 
-      to: { lat: customerPoints[1].lat, lng: customerPoints[1].lng, address: "الوجهة" } 
+      from: { lat: customerPoints[0].lat, lng: customerPoints[0].lng, address: customerPoints[0].label },
+      to: { lat: customerPoints[1].lat, lng: customerPoints[1].lng, address: customerPoints[1].label }
     };
     const res = await fetch("/api/rides", { 
       method: "POST", 
@@ -408,6 +582,63 @@ function initCustomerApp() {
   };
 }
 
+// ═══ إضافة نقطة (من GPS أو نقر أو بحث) ═══
+function addCustomerPoint(lat, lng, label) {
+  if (customerPoints.length >= 2) return;
+  
+  customerPoints.push({ lat, lng, label: label || "" });
+  
+  const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
+  const markerLabel = label ? `📍 ${label}` : defaultLabel;
+  
+  customerMarkers.push(
+    L.marker([lat, lng]).addTo(customerMap).bindPopup(markerLabel).openPopup()
+  );
+  
+  if (customerPoints.length === 2) {
+    document.getElementById("request-btn").disabled = false;
+    L.polyline(customerPoints.map(p => [p.lat, p.lng]), { color: "blue", weight: 4 }).addTo(customerMap);
+    document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
+  } else {
+    document.getElementById("customer-hint").textContent = 
+      "🎯 حدد الوجهة — انقر على الخريطة، أو استخدم 'استخدام موقعي'، أو ابحث بالعنوان";
+  }
+}
+
+// ═══ زر استخدام موقعي ═══
+function useMyLocation() {
+  if (!customerGPSLat || !customerGPSLng) {
+    notify("⚠️ لم يتم تحديد موقعك بعد. انتظر قليلاً أو اسمح بالوصول للموقع.");
+    return;
+  }
+  if (currentRideId) {
+    notify("⚠️ لا يمكن التعديل أثناء رحلة");
+    return;
+  }
+  addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
+  notify("✅ تم تحديد موقعك كنقطة انطلاق");
+}
+
+// ═══ اختيار نتيجة البحث ═══
+function selectSearchResult(result) {
+  if (currentRideId) {
+    notify("⚠️ لا يمكن التعديل أثناء رحلة");
+    return;
+  }
+  if (customerPoints.length >= 2) {
+    notify("⚠️ تم تحديد النقطتين. اضغط 'مسح' لإعادة التحديد.");
+    return;
+  }
+  
+  addCustomerPoint(result.lat, result.lng, result.name);
+  
+  document.getElementById("search-box").classList.remove("active");
+  document.getElementById("search-input").value = "";
+  document.getElementById("search-results").innerHTML = "";
+  
+  customerMap.setView([result.lat, result.lng], 15);
+}
+
 window.cancelRide = () => {
   if (!currentRideId) return;
   if (!confirm("هل تريد إلغاء الطلب؟")) return;
@@ -417,7 +648,6 @@ window.cancelRide = () => {
     cancelledBy: "customer"
   });
   
-  // لا تنتظر رد السيرفر — نظّف فوراً
   document.getElementById("ride-status").innerHTML = "";
   currentRideId = null;
   notify("✅ تم إلغاء الطلب");
@@ -428,9 +658,11 @@ window.clearSelection = () => {
   customerMarkers.forEach(m => m.remove());
   customerMarkers = []; customerPoints = [];
   document.getElementById("request-btn").disabled = true;
-  document.getElementById("customer-hint").textContent = "📍 اضغط على الخريطة";
+  document.getElementById("customer-hint").textContent = "📍 انقر على الخريطة، أو استخدم 'استخدام موقعي'، أو ابحث بالعنوان";
   document.getElementById("ride-status").innerHTML = "";
-  if (customerMap) customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
+  if (customerMap) {
+    customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
+  }
 };
 
 // ═══════════════════════════════════════
@@ -445,8 +677,8 @@ function initDriverApp() {
   if (driverMap) return;
   driverSocket = io();
 
- driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
- addMapLayers(driverMap);
+  driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
+  addMapLayers(driverMap);
 
   if (!navigator.geolocation) {
     alert("⚠️ متصفحك لا يدعم تحديد الموقع");
@@ -495,34 +727,37 @@ function initDriverApp() {
       notify("⛔ أوقفت الاستقبال");
     }
   };
-driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
-  currentRide = { _id: rideId, ...ride, etaMin };
-  
-  document.getElementById("requests-list").innerHTML = `
-    <div class="info-card">
-      <h4>🧍 بيانات الزبون</h4>
-      <p><b>👤 الاسم:</b> ${ride.customer?.name || "غير معروف"}</p>
-      <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
-      <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
-      <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
-      <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
-      <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
-    </div>
-  `;
-  
-  // ارسم على الخريطة
-  const fromLat = ride.from.lat, fromLng = ride.from.lng;
-  const toLat = ride.to.lat, toLng = ride.to.lng;
-  
-  L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
-  L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
-  L.polyline([[fromLat, fromLng], [toLat, toLng]], { 
-    color: "blue", weight: 5, dashArray: "10,10" 
-  }).addTo(driverMap);
-  driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
-  
-  notify("✅ تم تأكيد القبول");
-});
+
+  driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
+    currentRide = { _id: rideId, ...ride, etaMin };
+    
+    document.getElementById("requests-list").innerHTML = `
+      <div class="info-card">
+        <h4>🧍 بيانات الزبون</h4>
+        <p><b>👤 الاسم:</b> ${ride.customer?.name || "غير معروف"}</p>
+        <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
+        <p><b>📍 الانطلاق:</b> ${ride.from.address || "موقع الزبون"}</p>
+        <p><b>🏁 الوجهة:</b> ${ride.to.address || "الوجهة"}</p>
+        <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
+        <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
+        <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
+        <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
+      </div>
+    `;
+    
+    const fromLat = ride.from.lat, fromLng = ride.from.lng;
+    const toLat = ride.to.lat, toLng = ride.to.lng;
+    
+    L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
+    L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
+    L.polyline([[fromLat, fromLng], [toLat, toLng]], { 
+      color: "blue", weight: 5, dashArray: "10,10" 
+    }).addTo(driverMap);
+    driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
+    
+    notify("✅ تم تأكيد القبول");
+  });
+
   driverSocket.on("ride-request", (ride) => {
     if (currentRide) return;
     if (document.getElementById("ride-" + ride._id)) return;
@@ -541,6 +776,8 @@ driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
       ${distanceInfo}
       <p><b>👤 الزبون:</b> ${ride.customer?.name || "غير معروف"}</p>
       <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
+      <p><b>📍 من:</b> ${ride.from.address || "موقع الزبون"}</p>
+      <p><b>🏁 إلى:</b> ${ride.to.address || "الوجهة"}</p>
       <button class="btn-accept" onclick="acceptRide('${ride._id}', ${ride.etaMin || 0})">
         ✅ قبول الطلب
       </button>
@@ -549,7 +786,6 @@ driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
     notify(`🚕 طلب جديد — ${ride.distanceToCustomer} كم`);
   });
 
-  // ⚠️ اسم موحّد: ride-removed (يأتي من السيرفر)
   driverSocket.on("ride-removed", ({ rideId }) => {
     const card = document.getElementById("ride-" + rideId);
     if (card) card.remove();
@@ -581,30 +817,19 @@ driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
 }
 
 window.acceptRide = (rideId, etaMin) => {
-  // ⚠️ لا fetch هنا — فقط Socket.IO
   driverSocket.emit("accept-ride", { 
     rideId, 
     driverId: API.user.id, 
     etaMin 
   });
   
-  // احفظ الرحلة محلياً
   const card = document.getElementById("ride-" + rideId);
-  if (card) {
-    currentRide = { _id: rideId, etaMin };
-  }
+  if (card) currentRide = { _id: rideId, etaMin };
   
-  // امسح كل البطاقات
   document.getElementById("requests-list").innerHTML = "";
-  
-  // ⚠️ البيانات الكاملة ستصل عبر socket.on("ride-accepted") — لكن نحن السائق
-  // لذا سنستقبل تأكيد عبر "ride-confirmed" (سنضيفه في السيرفر)
-  
   notify("⏳ جاري تأكيد القبول...");
 };
 
-// ═══ استقبل تأكيد القبول للسائق ═══
-// (سنضيفها في socket.listeners لاحقاً)
 window.cancelRideDriver = () => {
   if (!currentRide) return;
   if (!confirm("هل تريد إلغاء الطلب؟ سيتم البحث عن سائق آخر للزبون.")) return;
@@ -640,4 +865,3 @@ window.completeRide = () => {
 </script>
 </body>
 </html>
-
