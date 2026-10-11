@@ -328,41 +328,49 @@ function addMapLayers(map) {
   );
 
   // ═══ 3. Hybrid: Satellite + Street Names + POI ═══
-  const STADIA_KEY = "b18cfa9d-bf29-4c96-9ecf-ddb7738d12f5";
+// ═══ Hybrid: قمر صناعي + كل التفاصيل (Esri + Stadia) ═══
+const STADIA_KEY = "b18cfa9d-bf29-4c96-9ecf-ddb7738d12f5";
+
+const hybridLayer = L.layerGroup([
+  // 1. القمر الصناعي
+  L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
+  ),
   
-  const hybridLayer = L.layerGroup([
-    // 3.1. Satellite imagery
-    L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { 
-        attribution: "© Esri", 
-        maxZoom: 22, 
-        maxNativeZoom: 17 
-      }
-    ),
-    
-    // 3.2. City/Country names (Esri)
-    L.tileLayer(
-      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-      { 
-        attribution: "© Esri", 
-        maxZoom: 22, 
-        maxNativeZoom: 17, 
-        opacity: 0.9
-      }
-    ),
-    
-    // 3.3. Streets + POI names (Stadia - with API Key)
-    L.tileLayer(
-      "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png?api_key=" + STADIA_KEY,
-      { 
-        attribution: "© Stadia Maps, © Stamen",
-        maxZoom: 20,
-        subdomains: "abcd",
-        opacity: 0.9
-      }
-    )
-  ]);
+  // 2. الطرق (Esri Transportation)
+  L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+    { 
+      attribution: "© Esri", 
+      maxZoom: 22, 
+      maxNativeZoom: 19,
+      opacity: 0.9
+    }
+  ),
+  
+  // 3. أسماء الأماكن والحدود (Esri Places)
+  L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    { 
+      attribution: "© Esri", 
+      maxZoom: 22, 
+      maxNativeZoom: 17, 
+      opacity: 0.9
+    }
+  ),
+  
+  // 4. أسماء إضافية (Stadia)
+  L.tileLayer(
+    "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png?api_key=" + STADIA_KEY,
+    { 
+      attribution: "© Stadia Maps, © Stamen",
+      maxZoom: 20,
+      subdomains: "abcd",
+      opacity: 0.85
+    }
+  )
+]);
 
   // ═══ Default layer ═══
   streetsLayer.addTo(map);
