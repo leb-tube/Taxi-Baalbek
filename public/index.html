@@ -323,7 +323,8 @@ function addMapLayers(map) {
   );
 
  // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
-// ═══ Hybrid: قمر صناعي + أسماء (Domain Auth) ═══
+// ═══ Hybrid: قمر صناعي + أسماء شوارع و POI ═══
+// ✅ Domain Auth: taxi-baalbek.onrender.com (بدون مفتاح)
 const hybridLayer = L.layerGroup([
   // 1. القمر الصناعي
   L.tileLayer(
@@ -337,7 +338,7 @@ const hybridLayer = L.layerGroup([
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.85 }
   ),
   
-  // 3. أسماء الشوارع + POI (Stadia, بدون مفتاح)
+  // 3. أسماء الشوارع + المطاعم + الفنادق (Stadia - Domain Auth)
   L.tileLayer(
     "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png",
     { 
