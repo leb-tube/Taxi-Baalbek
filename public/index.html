@@ -261,11 +261,13 @@ const satelliteLayer = L.tileLayer(
   }
 );
 
- const hybridLayer = L.layerGroup([
-  satelliteLayer, // طبقة القمر الصناعي
-  L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", // طبقة الأسماء فقط
-    { attribution: "© OpenStreetMap, © CartoDB", maxZoom: 22, maxNativeZoom: 18 }
+leLayer(
+    "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
+    { 
+      attribution: "© Esri", 
+      maxZoom: 22, 
+      maxNativeZoom: 17 
+    }
   )
 ]);
 
