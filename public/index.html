@@ -323,23 +323,28 @@ function addMapLayers(map) {
   );
 
  // ═══ Hybrid: قمر صناعي + أسماء من Esri Reference ═══
-// ═══ Hybrid: قمر صناعي + أسماء ═══
+// ═══ Hybrid: قمر صناعي + أسماء (Domain Auth) ═══
 const hybridLayer = L.layerGroup([
+  // 1. القمر الصناعي
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
   ),
+  
+  // 2. أسماء المدن الكبيرة (Esri)
   L.tileLayer(
     "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
     { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.85 }
   ),
+  
+  // 3. أسماء الشوارع + POI (Stadia, بدون مفتاح)
   L.tileLayer(
     "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png",
     { 
       attribution: "© Stadia Maps, © Stamen",
       maxZoom: 20,
       subdomains: "abcd",
-      opacity: 0.85
+      opacity: 0.9
     }
   )
 ]);
