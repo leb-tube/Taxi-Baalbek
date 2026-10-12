@@ -45,10 +45,11 @@ app.get("/api/pois", async (req, res) => {
       return res.status(400).json({ error: "Missing bounds" });
     }
     
-    const GEOAPIFY_KEY = 05514bb178d74ba293069a7bb9e6723b;
-    if (!GEOAPIFY_KEY) {
-      return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
-    }
+   const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
+if (!GEOAPIFY_KEY) {
+  console.error("❌ GEOAPIFY_KEY not configured in Environment!");
+  return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
+}
     
     // ═══ Cache Check ═══
     const cacheKey = `pois_${south}_${west}_${north}_${east}`;
@@ -85,7 +86,7 @@ app.get("/api/pois", async (req, res) => {
       "categories=" + encodeURIComponent(categories) +
       "&filter=rect:" + west + "," + south + "," + east + "," + north +
       "&limit=" + limit +
-      "&apiKey=" + 05514bb178d74ba293069a7bb9e6723b;
+      "&apiKey=" + GEOAPIFY_KEY;
     
     console.log("📡 Geoapify request...");
     
