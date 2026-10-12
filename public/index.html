@@ -444,7 +444,7 @@ function scheduleLoadPOIs(map) {
   clearTimeout(poiDebounceTimeout);
   poiDebounceTimeout = setTimeout(() => loadPOIs(map), 1500); // ← زدناها 1500ms
 }
-async function loadPOIs(map) {
+ async function loadPOIs(map) {
   if (poiLoading) {
     console.log("⏳ POI loading in progress, skipping...");
     return;
@@ -486,8 +486,10 @@ async function loadPOIs(map) {
     poiClientCache.set(cacheKey, { data: data, time: Date.now() });
     
     renderPOIs(map, data);
-    if (data.elements.length > 0) {
-  console.log(`✅ Loaded ${data.elements.length} POIs`);
+    
+    if (data.elements && data.elements.length > 0) {
+      console.log(`✅ Loaded ${data.elements.length} POIs`);
+    }
   } catch (err) {
     console.warn("POI load error:", err.message);
   } finally {
