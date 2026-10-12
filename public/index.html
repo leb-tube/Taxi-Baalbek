@@ -548,17 +548,12 @@ let driversMarkers = {};
 let currentRideId = null;
 let customerGPSMarker = null;
 let customerGPSLat = null, customerGPSLng = null;
-
- 
-  
-   
-    
-     
+let activeDriverId = null;               // ← ⚠️ جديد  
  
   function initCustomerApp() {
   if (customerMap) return;
   socket = io();
-
+let driverLocationMarker = null;
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(customerMap);
  // ═══ تحميل POI عند الحركة والزوم ═══
@@ -692,8 +687,59 @@ customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
   });
 
   socket.on("driver-location-update", ({ driverId, lat, lng }) => {
+    // ⚠️ إذا كان السائق النشط، ارسم خطاً بينه وبين الزبون
+    if (activeDriverId === driverId && customerGPSLat && customerGPSLng) {
+      // احذف الخط القديم
+      if (window.connectionLine) {
+        customerMap.removeLayer(window.connectionLine);
+      }
+      
+      // ارسم خطاً جديداً
+      window.connectionLine = L.polyline(
+        [[lat, lng], [customerGPSLat, customerGPSLng]],
+        { 
+          color: "#28a745", 
+          weight: 3, 
+          dashArray: "5, 5",
+          opacity: 0.6 
+        }
+      ).addTo(customerMap);
+    }
+    // تحديث marker السائق في القائمة
     if (driversMarkers[driverId]) {
       driversMarkers[driverId].setLatLng([lat, lng]);
+    }
+    
+    // ⚠️ إذا كان هذا هو السائق النشط، حدّث موقعه على الخريطة
+    if (activeDriverId === driverId) {
+      if (driverLocationMarker) {
+        driverLocationMarker.setLatLng([lat, lng]);
+      } else {
+        const driverIcon = L.divIcon({
+          html: '<div style="background:#28a745;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;box-shadow:0 0 12px rgba(40,167,69,.8);animation:pulse 1.5s infinite">🚗</div>',
+          className: "",
+          iconSize: [44, 44],
+          iconAnchor: [22, 22]
+        });
+        
+        driverLocationMarker = L.marker([lat, lng], { 
+          icon: driverIcon,
+          zIndexOffset: 1000
+        }).addTo(customerMap).bindPopup("🚗 سائقك في الطريق");
+        
+        // ⚠️ إضافة الأنيميشن
+        const style = document.createElement("style");
+        style.textContent = `
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+        `;
+        if (!document.getElementById("pulse-style")) {
+          style.id = "pulse-style";
+          document.head.appendChild(style);
+        }
+      }
     }
   });
 
@@ -718,6 +764,9 @@ customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
   });
 
   socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
+  socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
+    // ⚠️ احفظ ID السائق النشط
+    activeDriverId = driver._id;
     document.getElementById("ride-status").innerHTML = 
       '<div class="info-card">' +
         '<h4>✅ السائق في الطريق إليك</h4>' +
@@ -733,6 +782,12 @@ customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
 
   socket.on("ride-cancelled", ({ rideId }) => {
     if (currentRideId !== rideId) return;
+// ⚠️ احذف marker السائق
+    if (driverLocationMarker) {
+      customerMap.removeLayer(driverLocationMarker);
+      driverLocationMarker = null;
+    }
+    activeDriverId = null;
     document.getElementById("ride-status").innerHTML = "";
     currentRideId = null;
   });
@@ -759,7 +814,37 @@ customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
     socket.emit("new-ride", { ...ride, customerSocketId: socket.id });
   };
 }
-
+// ═══════════════════════════════════════
+// 🛣️ حساب الطريق الفعلي (OSRM)
+// ═══════════════════════════════════════
+async function getRoute(fromLat, fromLng, toLat, toLng) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("OSRM error");
+    
+    const data = await res.json();
+    
+    if (!data.routes || data.routes.length === 0) {
+      return null;
+    }
+    
+    const route = data.routes[0];
+    
+    // تحويل الإحداثيات [lng, lat] → [lat, lng] لـ Leaflet
+    const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    
+    return {
+      coordinates: coordinates,
+      distance: (route.distance / 1000).toFixed(2),   // كم
+      duration: Math.round(route.duration / 60)        // دقائق
+    };
+  } catch (err) {
+    console.error("Route error:", err);
+    return null;
+  }
+}
 // ═══ إضافة نقطة (من GPS أو نقر أو بحث) ═══
 function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length >= 2) return;
@@ -772,8 +857,8 @@ function addCustomerPoint(lat, lng, label) {
   
   const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
   const markerLabel = label 
-  ? '<span dir="auto">📍 ' + label + '</span>' 
-  : defaultLabel;
+    ? '<span dir="auto">📍 ' + label + '</span>' 
+    : defaultLabel;
   
   const newMarker = L.marker([lat, lng])
     .addTo(customerMap)
@@ -785,17 +870,51 @@ function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length === 2) {
     document.getElementById("request-btn").disabled = false;
     
-    const linePoints = customerPoints.map(function(p) {
-      return [p.lat, p.lng];
-    });
+    // ═══ رسم الطريق الفعلي ═══
+    const p1 = customerPoints[0];
+    const p2 = customerPoints[1];
     
-    L.polyline(linePoints, { color: "blue", weight: 4 }).addTo(customerMap);
-    document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
+    // ⚠️ ارسم خطاً مؤقتاً (مستقيماً) أولاً
+    const tempLine = L.polyline(
+      [[p1.lat, p1.lng], [p2.lat, p2.lng]], 
+      { color: "#999", weight: 4, dashArray: "5, 10" }
+    ).addTo(customerMap);
+    
+    // ⚠️ ثم احصل على الطريق الفعلي
+    getRoute(p1.lat, p1.lng, p2.lat, p2.lng).then(route => {
+      // احذف الخط المؤقت
+      customerMap.removeLayer(tempLine);
+      
+      if (route) {
+        // ✅ ارسم الطريق الفعلي
+        L.polyline(route.coordinates, {
+          color: "#007bff",
+          weight: 6,
+          opacity: 0.8,
+          lineJoin: "round",
+          lineCap: "round"
+        }).addTo(customerMap);
+        
+        // اعرض المسافة والوقت
+        document.getElementById("customer-hint").innerHTML = 
+          `✅ جاهز للطلب — ` +
+          `<b>المسافة:</b> ${route.distance} كم — ` +
+          `<b>الوقت المتوقع:</b> ${route.duration} دقيقة`;
+      } else {
+        // ⚠️ إذا فشل OSRM، استخدم الخط المستقيم
+        L.polyline(
+          [[p1.lat, p1.lng], [p2.lat, p2.lng]], 
+          { color: "blue", weight: 4 }
+        ).addTo(customerMap);
+        
+        document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
+      }
+    });
   } else {
     document.getElementById("customer-hint").textContent = 
       "🎯 حدد الوجهة — انقر على الخريطة، أو استخدم موقعي، أو ابحث بالعنوان";
   }
-} 
+}
 
 // ═══ زر استخدام موقعي ═══
 function useMyLocation() {
@@ -947,9 +1066,33 @@ function initDriverApp() {
     
     L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
     L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
-    L.polyline([[fromLat, fromLng], [toLat, toLng]], { 
-      color: "blue", weight: 5, dashArray: "10,10" 
-    }).addTo(driverMap);
+    
+    // ═══ احصل على الطريق الفعلي للسائق ═══
+    const tempLine = L.polyline(
+      [[fromLat, fromLng], [toLat, toLng]], 
+      { color: "#999", weight: 4, dashArray: "5, 10" }
+    ).addTo(driverMap);
+    
+    getRoute(fromLat, fromLng, toLat, toLng).then(route => {
+      driverMap.removeLayer(tempLine);
+      
+      if (route) {
+        L.polyline(route.coordinates, {
+          color: "#007bff",
+          weight: 6,
+          opacity: 0.85,
+          lineJoin: "round",
+          lineCap: "round"
+        }).addTo(driverMap);
+        
+        console.log(`🛣️ المسار: ${route.distance} كم — ${route.duration} دقيقة`);
+      } else {
+        L.polyline(
+          [[fromLat, fromLng], [toLat, toLng]], 
+          { color: "blue", weight: 5, dashArray: "10,10" }
+        ).addTo(driverMap);
+      }
+    });
     driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
     
     notify("✅ تم تأكيد القبول");
@@ -1004,6 +1147,12 @@ function initDriverApp() {
     document.getElementById("ride-" + rideId)?.remove();
     if (currentRide && currentRide._id === rideId) {
       currentRide = null;
+ // ⚠️ احذف marker السائق
+    if (driverLocationMarker) {
+      customerMap.removeLayer(driverLocationMarker);
+      driverLocationMarker = null;
+    }
+    activeDriverId = null;
       document.getElementById("requests-list").innerHTML = "";
       driverMap.eachLayer(l => {
         if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
