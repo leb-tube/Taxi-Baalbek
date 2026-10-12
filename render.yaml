@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: taxi-baalbek
+    env: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEOAPIFY_KEY
+        sync: false
+      - key: SEARCH_RADIUS_KM
+        value: "10"
+      - key: SEND_TO_NEAREST_ONLY
+        value: "true"
+      - key: FALLBACK_TO_ALL
+        value: "false"
