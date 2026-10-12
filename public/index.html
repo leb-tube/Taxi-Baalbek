@@ -314,6 +314,7 @@ function notify(msg, duration = 3500) {
   el.style.display = "block";
   setTimeout(() => el.style.display = "none", duration);
 }
+
 function routeByRole() {
   if (!API.token || !API.user) return showScreen("auth-screen");
   if (API.user.role === "driver") {
