@@ -415,27 +415,53 @@ async function searchAddress(query) {
     return [];
   }
 }
-// ═══ إضافة POI من OpenStreetMap (Overpass API) ═══
-// ═══ إضافة POI من OpenStreetMap (عبر السيرفر) ═══
+
+// ═══ Cache للـ POI ═══
+const poiClientCache = new Map();
+const POI_CLIENT_TTL = 5 * 60 * 1000; // 5 دقائق
+
+// ═══ Debounce ═══
+let poiDebounceTimeout = null;
+function scheduleLoadPOIs(map) {
+  clearTimeout(poiDebounceTimeout);
+  poiDebounceTimeout = setTimeout(() => loadPOIs(map), 800);
+}
+
 async function loadPOIs(map) {
   const bounds = map.getBounds();
-  const south = bounds.getSouth();
-  const west = bounds.getWest();
-  const north = bounds.getNorth();
-  const east = bounds.getEast();
-  
   const zoom = map.getZoom();
+  
   if (zoom < 14) return;
+  
+  const south = bounds.getSouth().toFixed(3);
+  const west = bounds.getWest().toFixed(3);
+  const north = bounds.getNorth().toFixed(3);
+  const east = bounds.getEast().toFixed(3);
+  
+  // ═══ Cache Key ═══
+  const cacheKey = `${zoom}_${south}_${west}_${north}_${east}`;
+  
+  // ═══ تحقق من Cache المحلي ═══
+  const cached = poiClientCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < POI_CLIENT_TTL) {
+    renderPOIs(map, cached.data);
+    console.log(`📦 Cache: ${cached.data.elements.length} POIs`);
+    return;
+  }
+  
+  // ═══ عدد النتائج حسب Zoom ═══
+  let limit = 50;
+  if (zoom >= 16) limit = 100;
+  if (zoom >= 17) limit = 200;
   
   const query = `[out:json][timeout:25];
 (
   node["amenity"~"restaurant|cafe|fast_food|hospital|pharmacy|fuel|bank|police"](${south},${west},${north},${east});
   node["tourism"~"hotel|guest_house|hostel"](${south},${west},${north},${east});
 );
-out body 100;`;
+out body ${limit};`;
   
   try {
-    // ⚠️ عبر السيرفر (proxy) بدل Overpass مباشرة
     const res = await fetch("/api/pois", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -449,64 +475,56 @@ out body 100;`;
     
     const data = await res.json();
     
-    if (!data.elements) {
-      console.error("Invalid POI response");
-      return;
-    }
+    // ═══ حفظ في Cache ═══
+    poiClientCache.set(cacheKey, { data: data, time: Date.now() });
     
-    // امسح POI القديمة
-    if (window.poiLayer) {
-      map.removeLayer(window.poiLayer);
-    }
-    
-    window.poiLayer = L.layerGroup().addTo(map);
-    
-    let count = 0;
-    data.elements.forEach(el => {
-      if (!el.lat || !el.lon) return;
-      
-      const type = el.tags.amenity || el.tags.tourism;
-      const name = el.tags.name || el.tags["name:ar"] || el.tags["name:en"];
-      if (!name) return;
-      
-      const icons = {
-        restaurant: "🍽️",
-        cafe: "☕",
-        fast_food: "🍔",
-        hospital: "🏥",
-        pharmacy: "💊",
-        fuel: "⛽",
-        bank: "🏦",
-        police: "🚔",
-        hotel: "🏨",
-        guest_house: "🏠",
-        hostel: "🏨"
-      };
-      
-      const icon = icons[type] || "📍";
-      
-      const marker = L.marker([el.lat, el.lon], {
-        icon: L.divIcon({
-          html: '<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.7);background:rgba(255,255,255,.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">' + icon + '</div>',
-          className: "",
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        })
-      });
-      
-      marker.bindPopup(
-        '<b>' + icon + ' ' + name + '</b><br>' +
-        '<small>' + (el.tags["addr:street"] || "") + '</small>'
-      );
-      
-      window.poiLayer.addLayer(marker);
-      count++;
-    });
-    
-    console.log("✅ Loaded " + count + " POIs");
+    renderPOIs(map, data);
+    console.log(`✅ Loaded ${data.elements.length} POIs from server`);
   } catch (err) {
     console.error("Overpass error:", err.message);
   }
+}
+
+// ═══ دالة رسم POI (منفصلة) ═══
+function renderPOIs(map, data) {
+  if (!data.elements) return;
+  
+  // امسح القديمة
+  if (window.poiLayer) {
+    map.removeLayer(window.poiLayer);
+  }
+  
+  window.poiLayer = L.layerGroup().addTo(map);
+  
+  const icons = {
+    restaurant: "🍽️", cafe: "☕", fast_food: "🍔",
+    hospital: "🏥", pharmacy: "💊", fuel: "⛽",
+    bank: "🏦", police: "🚔", hotel: "🏨",
+    guest_house: "🏠", hostel: "🏨"
+  };
+  
+  let count = 0;
+  data.elements.forEach(el => {
+    if (!el.lat || !el.lon) return;
+    const type = el.tags.amenity || el.tags.tourism;
+    const name = el.tags.name || el.tags["name:ar"] || el.tags["name:en"];
+    if (!name) return;
+    
+    const icon = icons[type] || "📍";
+    
+    const marker = L.marker([el.lat, el.lon], {
+      icon: L.divIcon({
+        html: '<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.7);background:rgba(255,255,255,.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">' + icon + '</div>',
+        className: "",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      })
+    });
+    
+    marker.bindPopup('<b>' + icon + ' ' + name + '</b>');
+    window.poiLayer.addLayer(marker);
+    count++;
+  });
 }
 // ═══════════════════════════════════════
 // 🧍 تطبيق الزبون
@@ -530,9 +548,10 @@ let customerGPSLat = null, customerGPSLng = null;
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(customerMap);
  // ═══ تحميل POI عند الحركة والزوم ═══
-  customerMap.on("moveend", () => loadPOIs(customerMap));
-  customerMap.on("zoomend", () => loadPOIs(customerMap));
-  
+
+customerMap.on("moveend", () => scheduleLoadPOIs(customerMap));
+customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
+
   // تحميل أولي بعد 2 ثانية
   setTimeout(() => loadPOIs(customerMap), 2000);
 
@@ -837,8 +856,8 @@ function initDriverApp() {
   driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(driverMap);
  // ═══ تحميل POI عند الحركة والزوم ═══
-  driverMap.on("moveend", () => loadPOIs(driverMap));
-  driverMap.on("zoomend", () => loadPOIs(driverMap));
+  driverMap.on("moveend", () => scheduleLoadPOIs(driverMap));
+  driverMap.on("zoomend", () => scheduleLoadPOIs(driverMap));
   
   setTimeout(() => loadPOIs(driverMap), 2000);
 
