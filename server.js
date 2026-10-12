@@ -32,17 +32,26 @@ const POI_CACHE_MAX_SIZE = 500;
 // ═══════════════════════════════════════════════════════════
 // 🗺️ Overpass API Proxy (POI)
 // ═══════════════════════════════════════════════════════════
-app.post("/api/pois", async (req, res) => {
+// ═══════════════════════════════════════════════════════════
+// 🗺️ Geoapify Places API Proxy
+// ═══════════════════════════════════════════════════════════
+app.get("/api/pois", async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const query = req.body.query;
-    if (!query) {
-      return res.status(400).json({ error: "Query required" });
+    const { south, west, north, east, zoom } = req.query;
+    
+    if (!south || !west || !north || !east) {
+      return res.status(400).json({ error: "Missing bounds" });
+    }
+    
+    const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
+    if (!GEOAPIFY_KEY) {
+      return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
     }
     
     // ═══ Cache Check ═══
-    const cacheKey = query.substring(0, 200);
+    const cacheKey = `pois_${south}_${west}_${north}_${east}`;
     const cached = poiCache.get(cacheKey);
     
     if (cached && Date.now() - cached.time < POI_CACHE_TTL) {
@@ -50,109 +59,107 @@ app.post("/api/pois", async (req, res) => {
       return res.json(cached.data);
     }
     
-    // ═══ Overpass Servers (بالترتيب) ═══
-    const servers = [
-      { url: "https://overpass-api.de/api/interpreter", name: "main" },
-      { url: "https://overpass.kumi.systems/api/interpreter", name: "kumi" },
-      { url: "https://overpass.openstreetmap.ru/api/interpreter", name: "ru" },
-      { url: "https://overpass.private.coffee/api/interpreter", name: "coffee" }
-    ];
+    // ═══ عدد النتائج حسب Zoom ═══
+    let limit = 50;
+    if (zoom >= 16) limit = 100;
+    if (zoom >= 17) limit = 200;
     
-    const errors = [];
+    // ═══ Geoapify Categories ═══
+    const categories = [
+      "catering.restaurant",
+      "catering.cafe",
+      "catering.fast_food",
+      "healthcare.hospital",
+      "healthcare.pharmacy",
+      "service.vehicle.fuel",
+      "service.financial.bank",
+      "service.financial.atm",
+      "service.police",
+      "accommodation.hotel",
+      "accommodation.hostel",
+      "accommodation.guest_house"
+    ].join(",");
     
-    // ═══ جرب كل سيرفر بالتتابع ═══
-    for (const server of servers) {
-      try {
-        console.log(`📡 [${server.name}] Trying...`);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        
-        const response = await fetch(server.url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "TaxiBaalbek/1.0 (contact@taxi-baalbek.onrender.com)"
-          },
-          body: "data=" + encodeURIComponent(query),
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          const err = `${server.name}: HTTP ${response.status}`;
-          errors.push(err);
-          console.log("⚠️", err);
-          continue;
-        }
-        
-        const text = await response.text();
-        
-        // ⚠️ تحقق أنه JSON (ليس XML/HTML)
-        if (!text || text.trim().startsWith("<")) {
-          const err = `${server.name}: returned XML/HTML`;
-          errors.push(err);
-          console.log("⚠️", err);
-          continue;
-        }
-        
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (parseErr) {
-          const err = `${server.name}: JSON parse error`;
-          errors.push(err);
-          console.log("⚠️", err);
-          continue;
-        }
-        
-        if (!data.elements) {
-          const err = `${server.name}: no elements field`;
-          errors.push(err);
-          console.log("⚠️", err);
-          continue;
-        }
-        
-        // ═══ نجاح! ═══
-        const duration = Date.now() - startTime;
-        console.log(`✅ [${server.name}] ${data.elements.length} elements in ${duration}ms`);
-        
-        // احفظ في cache
-        poiCache.set(cacheKey, { 
-          data: data, 
-          time: Date.now() 
-        });
-        
-        // نظّف cache القديم إذا كبر جداً
-        if (poiCache.size > POI_CACHE_MAX_SIZE) {
-          const oldestKeys = [...poiCache.keys()].slice(0, 100);
-          oldestKeys.forEach(k => poiCache.delete(k));
-          console.log(`🧹 Cleaned POI cache (size: ${poiCache.size})`);
-        }
-        
-        return res.json(data);
-        
-      } catch (err) {
-        const errMsg = `${server.name}: ${err.message}`;
-        errors.push(errMsg);
-        console.log("❌", errMsg);
-        continue;
-      }
+    // ═══ Geoapify URL ═══
+    const url = "https://api.geoapify.com/v2/places?" +
+      "categories=" + encodeURIComponent(categories) +
+      "&filter=rect:" + west + "," + south + "," + east + "," + north +
+      "&limit=" + limit +
+      "&apiKey=" + GEOAPIFY_KEY;
+    
+    console.log("📡 Geoapify request...");
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("❌ Geoapify HTTP", response.status, errText.substring(0, 200));
+      return res.status(500).json({ 
+        error: "Geoapify returned " + response.status 
+      });
     }
     
-    // ═══ كل السيرفرات فشلت ═══
-    console.error("❌ All Overpass servers failed:");
-    errors.forEach(e => console.error("   -", e));
+    const data = await response.json();
     
-    return res.status(500).json({ 
-      error: "All Overpass servers failed",
-      details: errors
+    if (!data.features) {
+      console.log("⚠️ No features");
+      return res.json({ elements: [] });
+    }
+    
+    // ═══ تحويل Geoapify → Overpass format (للتوافق مع الكود القديم) ═══
+    const elements = data.features.map(f => {
+      const props = f.properties;
+      const geom = f.geometry;
+      
+      // فك تشفير category
+      let type = "📍";
+      const cat = props.categories?.[0] || "";
+      
+      if (cat.includes("restaurant")) type = "restaurant";
+      else if (cat.includes("cafe")) type = "cafe";
+      else if (cat.includes("fast_food")) type = "fast_food";
+      else if (cat.includes("hospital")) type = "hospital";
+      else if (cat.includes("pharmacy")) type = "pharmacy";
+      else if (cat.includes("fuel")) type = "fuel";
+      else if (cat.includes("bank")) type = "bank";
+      else if (cat.includes("police")) type = "police";
+      else if (cat.includes("hotel")) type = "hotel";
+      else if (cat.includes("hostel")) type = "hostel";
+      else if (cat.includes("guest_house")) type = "guest_house";
+      
+      return {
+        lat: geom.coordinates[1],
+        lon: geom.coordinates[0],
+        tags: {
+          amenity: type,
+          name: props.name || props.address_line1 || "بدون اسم",
+          "addr:street": props.address_line2 || ""
+        }
+      };
     });
     
+    const result = { elements: elements };
+    
+    // ═══ Cache ═══
+    poiCache.set(cacheKey, { 
+      data: result, 
+      time: Date.now() 
+    });
+    
+    // نظّف cache القديم
+    if (poiCache.size > POI_CACHE_MAX_SIZE) {
+      const oldestKeys = [...poiCache.keys()].slice(0, 100);
+      oldestKeys.forEach(k => poiCache.delete(k));
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ Geoapify: ${elements.length} POIs in ${duration}ms`);
+    
+    res.json(result);
+    
   } catch (err) {
-    console.error("❌ POI route error:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("❌ POI error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

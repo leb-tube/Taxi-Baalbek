@@ -444,20 +444,23 @@ function scheduleLoadPOIs(map) {
   poiDebounceTimeout = setTimeout(() => loadPOIs(map), 1500); // ← زدناها 1500ms
 }
 async function loadPOIs(map) {
+  if (poiLoading) {
+    console.log("⏳ POI loading in progress, skipping...");
+    return;
+  }
+  
   const bounds = map.getBounds();
   const zoom = map.getZoom();
   
   if (zoom < 14) return;
   
-  const south = bounds.getSouth().toFixed(2);
-  const west = bounds.getWest().toFixed(2);
-  const north = bounds.getNorth().toFixed(2);
-  const east = bounds.getEast().toFixed(2);
+  const south = bounds.getSouth().toFixed(4);
+  const west = bounds.getWest().toFixed(4);
+  const north = bounds.getNorth().toFixed(4);
+  const east = bounds.getEast().toFixed(4);
   
-  // ═══ Cache Key ═══
   const cacheKey = `${zoom}_${south}_${west}_${north}_${east}`;
   
-  // ═══ تحقق من Cache المحلي ═══
   const cached = poiClientCache.get(cacheKey);
   if (cached && Date.now() - cached.time < POI_CLIENT_TTL) {
     renderPOIs(map, cached.data);
@@ -465,39 +468,28 @@ async function loadPOIs(map) {
     return;
   }
   
-  // ═══ عدد النتائج حسب Zoom ═══
-  let limit = 50;
-  if (zoom >= 16) limit = 100;
-  if (zoom >= 17) limit = 200;
-  
-  const query = `[out:json][timeout:25];
-(
-  node["amenity"~"restaurant|cafe|fast_food|hospital|pharmacy|fuel|bank|police"](${south},${west},${north},${east});
-  node["tourism"~"hotel|guest_house|hostel"](${south},${west},${north},${east});
-);
-out body ${limit};`;
+  poiLoading = true;
   
   try {
-    const res = await fetch("/api/pois", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: query })
-    });
+    const url = `/api/pois?south=${south}&west=${west}&north=${north}&east=${east}&zoom=${zoom}`;
+    
+    const res = await fetch(url);
     
     if (!res.ok) {
-      console.error("POI server error:", res.status);
+      console.warn("POI server returned:", res.status);
       return;
     }
     
     const data = await res.json();
     
-    // ═══ حفظ في Cache ═══
     poiClientCache.set(cacheKey, { data: data, time: Date.now() });
     
     renderPOIs(map, data);
-    console.log(`✅ Loaded ${data.elements.length} POIs from server`);
+    console.log(`✅ Loaded ${data.elements.length} POIs`);
   } catch (err) {
-    console.error("Overpass error:", err.message);
+    console.warn("POI load error:", err.message);
+  } finally {
+    poiLoading = false;
   }
 }
 
