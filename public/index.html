@@ -1240,7 +1240,7 @@ function initDriverApp() {
       });
     }
   });
-
+}
   driverSocket.on("ride-unavailable", ({ rideId }) => {
     document.getElementById("ride-" + rideId)?.remove();
     notify("⚠️ الرحلة اتخذها سائق آخر");
@@ -1327,7 +1327,7 @@ window.completeRide = () => {
   driverMap.setView([myLat, myLng], 15);
   notify("✅ تم إنهاء الرحلة");
 };
-}
+
 </script>
 </body>
 </html>
