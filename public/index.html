@@ -120,6 +120,24 @@ input:focus { outline: none; border-color: #ffc107; }
   background: #ffb300;
 }
 .map-wrapper { position: relative; }
+/* ═══ حل مشكلة RTL/LTR للنصوص المختلطة ═══ */
+.leaflet-popup-content,
+.search-result-item .title,
+.search-result-item .subtitle,
+.info-card p,
+.ride-card p {
+  unicode-bidi: plaintext;
+}
+
+.leaflet-popup-content b,
+.search-result-item .title,
+.search-result-item .subtitle {
+  unicode-bidi: plaintext;
+  direction: auto;
+}
+* {
+  unicode-bidi: plaintext;
+}
 </style>
 </head>
 <body>
@@ -416,8 +434,6 @@ async function searchAddress(query) {
   }
 }
 
- 
-
 // ═══ Debounce طويل + cache ═══
 let poiDebounceTimeout = null;
 const poiClientCache = new Map();
@@ -521,7 +537,9 @@ function renderPOIs(map, data) {
       })
     });
     
-    marker.bindPopup('<b>' + icon + ' ' + name + '</b>');
+    const safeName = '<span dir="auto" style="unicode-bidi: plaintext">' + name + '</span>';
+marker.bindPopup('<b>' + icon + ' <span dir="auto" style="unicode-bidi: plaintext">' + name + '</span></b>'
+);
     window.poiLayer.addLayer(marker);
     count++;
   });
@@ -640,9 +658,9 @@ customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
       results.forEach(r => {
         const div = document.createElement("div");
         div.className = "search-result-item";
-        div.innerHTML = 
-          '<div class="title">📍 ' + r.name + '</div>' +
-          '<div class="subtitle">' + r.fullName.substring(0, 80) + '...</div>';
+       div.innerHTML = 
+  '<div class="title" dir="auto">📍 ' + r.name + '</div>' +
+  '<div class="subtitle" dir="auto">' + r.fullName.substring(0, 80) + '...</div>';
         div.onclick = () => selectSearchResult(r);
         searchResults.appendChild(div);
       });
@@ -757,7 +775,9 @@ function addCustomerPoint(lat, lng, label) {
   });
   
   const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
-  const markerLabel = label ? "📍 " + label : defaultLabel;
+  const markerLabel = label 
+  ? '<span dir="auto">📍 ' + label + '</span>' 
+  : defaultLabel;
   
   const newMarker = L.marker([lat, lng])
     .addTo(customerMap)
