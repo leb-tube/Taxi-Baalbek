@@ -45,7 +45,7 @@ app.get("/api/pois", async (req, res) => {
       return res.status(400).json({ error: "Missing bounds" });
     }
     
-    const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
+    const GEOAPIFY_KEY = 05514bb178d74ba293069a7bb9e6723b;
     if (!GEOAPIFY_KEY) {
       return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
     }
