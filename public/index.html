@@ -866,7 +866,7 @@ function initCustomerApp() {
       }
     }
   });
-
+}
   socket.on("ride-cancelled", ({ rideId }) => {
     if (currentRideId !== rideId) return;
     if (driverLocationMarker) {
@@ -1259,6 +1259,7 @@ function initDriverApp() {
     }
   });
 }
+
 // ═══════════════════════════════════════
 // 📍 إشعار الزبون بوصول السائق
 // ═══════════════════════════════════════
