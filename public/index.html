@@ -116,10 +116,9 @@ input:focus { outline: none; border-color: #ffc107; }
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(0,0,0,.3);
 }
-.search-toggle:hover {
-  background: #ffb300;
-}
+.search-toggle:hover { background: #ffb300; }
 .map-wrapper { position: relative; }
+
 /* ═══ حل مشكلة RTL/LTR للنصوص المختلطة ═══ */
 .leaflet-popup-content,
 .search-result-item .title,
@@ -135,15 +134,13 @@ input:focus { outline: none; border-color: #ffc107; }
   unicode-bidi: plaintext;
   direction: auto;
 }
-* {
-  unicode-bidi: plaintext;
-}
 </style>
 </head>
 <body>
 
 <div id="notification" class="notification"></div>
 
+<!-- ═══════ شاشة الدخول ═══════ -->
 <div id="auth-screen" class="screen active">
   <div class="auth-container">
     <h1>🚕 Taxi Lebanon</h1>
@@ -181,6 +178,7 @@ input:focus { outline: none; border-color: #ffc107; }
   </div>
 </div>
 
+<!-- ═══════ شاشة الزبون ═══════ -->
 <div id="customer-screen" class="screen">
   <header class="app-header">
     <span>🧍 مرحباً، <b id="customer-name"></b></span>
@@ -204,6 +202,7 @@ input:focus { outline: none; border-color: #ffc107; }
   </div>
 </div>
 
+<!-- ═══════ شاشة السائق ═══════ -->
 <div id="driver-screen" class="screen">
   <header class="app-header">
     <span>🚗 مرحباً، <b id="driver-name"></b></span>
@@ -233,34 +232,42 @@ function saveSession(token, user) {
   localStorage.setItem("token", token); 
   localStorage.setItem("user", JSON.stringify(user)); 
 }
+
 function logout() { localStorage.clear(); location.reload(); }
+
 function showScreen(id) { 
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); 
   document.getElementById(id).classList.add("active"); 
 }
+
+function notify(msg, duration) {
+  duration = duration || 3500;
+  const el = document.getElementById("notification");
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(function() { el.style.display = "none"; }, duration);
+}
+
 // ═══════════════════════════════════════
 // 🔔 إشعار صوتي (بدون ملفات)
 // ═══════════════════════════════════════
-function playBeep(type = "default") {
+function playBeep(type) {
+  type = type || "default";
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
-    // ═══ أنواع مختلفة من الأصوات ═══
     const sounds = {
-      // طلب جديد للسائق (نغمة عالية متكررة)
       new_ride: [
         { freq: 800, duration: 0.15, delay: 0 },
         { freq: 1000, duration: 0.15, delay: 0.2 },
         { freq: 800, duration: 0.15, delay: 0.4 },
         { freq: 1000, duration: 0.3, delay: 0.6 }
       ],
-      // قبول السائق للزبون (نغمة صاعدة)
       accepted: [
         { freq: 523, duration: 0.15, delay: 0 },
         { freq: 659, duration: 0.15, delay: 0.15 },
         { freq: 784, duration: 0.3, delay: 0.3 }
       ],
-      // وصول السائق (نغمة مميزة)
       arrived: [
         { freq: 660, duration: 0.2, delay: 0 },
         { freq: 880, duration: 0.2, delay: 0.25 },
@@ -271,8 +278,8 @@ function playBeep(type = "default") {
     
     const notes = sounds[type] || sounds.accepted;
     
-    notes.forEach(note => {
-      setTimeout(() => {
+    notes.forEach(function(note) {
+      setTimeout(function() {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
@@ -294,9 +301,8 @@ function playBeep(type = "default") {
   }
 }
 
-// ⚠️ يجب تشغيل صوت واحد بعد تفاعل المستخدم
-// Chrome يمنع التشغيل التلقائي
-document.addEventListener("click", () => {
+// تفعيل الصوت بعد أول ضغطة (Chrome requirement)
+document.addEventListener("click", function() {
   if (!window.audioEnabled) {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -307,13 +313,6 @@ document.addEventListener("click", () => {
   }
 }, { once: true });
 
-function notify(msg, duration = 3500) {
-function notify(msg, duration = 3500) {
-  const el = document.getElementById("notification");
-  el.textContent = msg;
-  el.style.display = "block";
-  setTimeout(() => el.style.display = "none", duration);
-}
 function routeByRole() {
   if (!API.token || !API.user) return showScreen("auth-screen");
   if (API.user.role === "driver") {
@@ -327,21 +326,24 @@ function routeByRole() {
   }
 }
 
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.onclick = () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+// ═══ التبويبات ═══
+document.querySelectorAll(".tab").forEach(function(tab) {
+  tab.onclick = function() {
+    document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+    document.querySelectorAll(".tab-content").forEach(function(c) { c.classList.remove("active"); });
     tab.classList.add("active");
     document.getElementById(tab.dataset.tab + "-form").classList.add("active");
   };
 });
-document.querySelectorAll("input[name=role]").forEach(r => {
-  r.onchange = () => { 
+
+document.querySelectorAll("input[name=role]").forEach(function(r) {
+  r.onchange = function() { 
     document.getElementById("driver-fields").classList.toggle("hidden", r.value !== "driver"); 
   };
 });
 
-document.getElementById("login-form").onsubmit = async (e) => {
+// ═══ تسجيل الدخول ═══
+document.getElementById("login-form").onsubmit = async function(e) {
   e.preventDefault();
   const errEl = document.getElementById("login-error");
   errEl.textContent = "";
@@ -363,7 +365,8 @@ document.getElementById("login-form").onsubmit = async (e) => {
   }
 };
 
-document.getElementById("register-form").onsubmit = async (e) => {
+// ═══ التسجيل ═══
+document.getElementById("register-form").onsubmit = async function(e) {
   e.preventDefault();
   const role = document.querySelector("input[name=role]:checked").value;
   const errEl = document.getElementById("reg-error");
@@ -376,7 +379,7 @@ document.getElementById("register-form").onsubmit = async (e) => {
         name: document.getElementById("reg-name").value.trim(), 
         phone: document.getElementById("reg-phone").value.trim(), 
         password: document.getElementById("reg-password").value, 
-        role, 
+        role: role, 
         carModel: document.getElementById("reg-car-model").value, 
         carPlate: document.getElementById("reg-car-plate").value 
       }) 
@@ -396,73 +399,37 @@ routeByRole();
 // 🗺️ دالة إضافة الطبقات
 // ═══════════════════════════════════════
 function addMapLayers(map) {
-  // ═══ 1. Streets (OpenStreetMap) ═══
   const streetsLayer = L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    { 
-      attribution: "© OpenStreetMap", 
-      maxZoom: 19 
-    }
+    { attribution: "© OpenStreetMap", maxZoom: 19 }
   );
 
-  // ═══ 2. Satellite (Esri) ═══
   const satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { 
-      attribution: "© Esri", 
-      maxZoom: 22,
-      maxNativeZoom: 17
-    }
+    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
   );
 
-  // ═══ 3. Hybrid: Satellite + Street Names + POI ═══
-// ═══ Hybrid: قمر صناعي + كل التفاصيل (Esri + Stadia) ═══
- 
-const hybridLayer = L.layerGroup([
-  // 1. القمر الصناعي
-  L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
-  ),
-  
-  // 2. الطرق (Esri Transportation)
-  L.tileLayer(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-    { 
-      attribution: "© Esri", 
-      maxZoom: 22, 
-      maxNativeZoom: 19,
-      opacity: 0.9
-    }
-  ),
-  
-  // 3. أسماء الأماكن والحدود (Esri Places)
-  L.tileLayer(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    { 
-      attribution: "© Esri", 
-      maxZoom: 22, 
-      maxNativeZoom: 17, 
-      opacity: 0.9
-    }
-  ),
-  
-  // 4. أسماء إضافية (Stadia — Domain Auth، بدون مفتاح)
-  L.tileLayer(
-    "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png",
-    { 
-      attribution: "© Stadia Maps, © Stamen",
-      maxZoom: 20,
-      subdomains: "abcd",
-      opacity: 0.85
-    }
-  )
-]);
+  const hybridLayer = L.layerGroup([
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
+    ),
+    L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 19, opacity: 0.9 }
+    ),
+    L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.9 }
+    ),
+    L.tileLayer(
+      "https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png",
+      { attribution: "© Stadia Maps, © Stamen", maxZoom: 20, subdomains: "abcd", opacity: 0.85 }
+    )
+  ]);
 
-  // ═══ Default layer ═══
   streetsLayer.addTo(map);
 
-  // ═══ Layer switcher ═══
   L.control.layers({
     "🗺️ شوارع": streetsLayer,
     "🛰️ قمر صناعي": satelliteLayer,
@@ -472,7 +439,6 @@ const hybridLayer = L.layerGroup([
     collapsed: false
   }).addTo(map);
 
-  // ═══ Move layers button down ═══
   setTimeout(function() {
     const layersControl = document.querySelector('.leaflet-control-layers');
     if (layersControl) {
@@ -482,20 +448,17 @@ const hybridLayer = L.layerGroup([
 }
 
 // ═══════════════════════════════════════
-// 🔍 دالة البحث بالعنوان (Nominatim)
+// 🔍 دالة البحث بالعنوان
 // ═══════════════════════════════════════
 async function searchAddress(query) {
   if (!query || query.length < 3) return [];
   
   try {
-    // ⚠️ نستخدم السيرفر كوسيط (proxy)
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    
+    const res = await fetch("/api/search?q=" + encodeURIComponent(query));
     if (!res.ok) {
       console.error("Search server error:", res.status);
       return [];
     }
-    
     return await res.json();
   } catch (err) {
     console.error("Search error:", err);
@@ -503,26 +466,55 @@ async function searchAddress(query) {
   }
 }
 
-// ═══ Debounce طويل + cache ═══
-// ═══ Debounce + Cache + Loading للـ POI ═══
+// ═══════════════════════════════════════
+// 🛣️ حساب الطريق الفعلي (OSRM)
+// ═══════════════════════════════════════
+async function getRoute(fromLat, fromLng, toLat, toLng) {
+  try {
+    const url = "https://router.project-osrm.org/route/v1/driving/" + 
+      fromLng + "," + fromLat + ";" + toLng + "," + toLat + 
+      "?overview=full&geometries=geojson";
+    
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("OSRM error");
+    
+    const data = await res.json();
+    if (!data.routes || data.routes.length === 0) return null;
+    
+    const route = data.routes[0];
+    const coordinates = route.geometry.coordinates.map(function(coord) {
+      return [coord[1], coord[0]];
+    });
+    
+    return {
+      coordinates: coordinates,
+      distance: (route.distance / 1000).toFixed(2),
+      duration: Math.round(route.duration / 60)
+    };
+  } catch (err) {
+    console.error("Route error:", err);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════
+// 📍 POI (Geoapify)
+// ═══════════════════════════════════════
 let poiDebounceTimeout = null;
-let poiLoading = false;                     // ← ⚠️ هذا السطر الناقص
+let poiLoading = false;
 const poiClientCache = new Map();
 const POI_CLIENT_TTL = 10 * 60 * 1000;
 
 function scheduleLoadPOIs(map) {
   clearTimeout(poiDebounceTimeout);
-  poiDebounceTimeout = setTimeout(() => loadPOIs(map), 1500); // ← زدناها 1500ms
+  poiDebounceTimeout = setTimeout(function() { loadPOIs(map); }, 1500);
 }
- async function loadPOIs(map) {
-  if (poiLoading) {
-    console.log("⏳ POI loading in progress, skipping...");
-    return;
-  }
+
+async function loadPOIs(map) {
+  if (poiLoading) return;
   
   const bounds = map.getBounds();
   const zoom = map.getZoom();
-  
   if (zoom < 14) return;
   
   const south = bounds.getSouth().toFixed(4);
@@ -530,20 +522,18 @@ function scheduleLoadPOIs(map) {
   const north = bounds.getNorth().toFixed(4);
   const east = bounds.getEast().toFixed(4);
   
-  const cacheKey = `${zoom}_${south}_${west}_${north}_${east}`;
+  const cacheKey = zoom + "_" + south + "_" + west + "_" + north + "_" + east;
   
   const cached = poiClientCache.get(cacheKey);
   if (cached && Date.now() - cached.time < POI_CLIENT_TTL) {
     renderPOIs(map, cached.data);
-    console.log(`📦 Cache: ${cached.data.elements.length} POIs`);
     return;
   }
   
   poiLoading = true;
   
   try {
-    const url = `/api/pois?south=${south}&west=${west}&north=${north}&east=${east}&zoom=${zoom}`;
-    
+    const url = "/api/pois?south=" + south + "&west=" + west + "&north=" + north + "&east=" + east + "&zoom=" + zoom;
     const res = await fetch(url);
     
     if (!res.ok) {
@@ -552,13 +542,11 @@ function scheduleLoadPOIs(map) {
     }
     
     const data = await res.json();
-    
     poiClientCache.set(cacheKey, { data: data, time: Date.now() });
-    
     renderPOIs(map, data);
     
     if (data.elements && data.elements.length > 0) {
-      console.log(`✅ Loaded ${data.elements.length} POIs`);
+      console.log("✅ Loaded " + data.elements.length + " POIs");
     }
   } catch (err) {
     console.warn("POI load error:", err.message);
@@ -567,11 +555,9 @@ function scheduleLoadPOIs(map) {
   }
 }
 
-// ═══ دالة رسم POI (منفصلة) ═══
 function renderPOIs(map, data) {
   if (!data.elements) return;
   
-  // امسح القديمة
   if (window.poiLayer) {
     map.removeLayer(window.poiLayer);
   }
@@ -585,8 +571,7 @@ function renderPOIs(map, data) {
     guest_house: "🏠", hostel: "🏨"
   };
   
-  let count = 0;
-  data.elements.forEach(el => {
+  data.elements.forEach(function(el) {
     if (!el.lat || !el.lon) return;
     const type = el.tags.amenity || el.tags.tourism;
     const name = el.tags.name || el.tags["name:ar"] || el.tags["name:en"];
@@ -603,13 +588,11 @@ function renderPOIs(map, data) {
       })
     });
     
-    const safeName = '<span dir="auto" style="unicode-bidi: plaintext">' + name + '</span>';
-marker.bindPopup('<b>' + icon + ' <span dir="auto" style="unicode-bidi: plaintext">' + name + '</span></b>'
-);
+    marker.bindPopup('<b>' + icon + ' <span dir="auto">' + name + '</span></b>');
     window.poiLayer.addLayer(marker);
-    count++;
   });
 }
+
 // ═══════════════════════════════════════
 // 🧍 تطبيق الزبون
 // ═══════════════════════════════════════
@@ -618,27 +601,25 @@ let driversMarkers = {};
 let currentRideId = null;
 let customerGPSMarker = null;
 let customerGPSLat = null, customerGPSLng = null;
-let activeDriverId = null;               // ← ⚠️ جديد  
- 
-   
+let activeDriverId = null;
+let driverLocationMarker = null;
+
 function initCustomerApp() {
   if (customerMap) return;
   socket = io();
   
-  let driverLocationMarker = null;
-  
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(customerMap);
   
-  customerMap.on("moveend", () => scheduleLoadPOIs(customerMap));
-  customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
+  customerMap.on("moveend", function() { scheduleLoadPOIs(customerMap); });
+  customerMap.on("zoomend", function() { scheduleLoadPOIs(customerMap); });
   
-  setTimeout(() => loadPOIs(customerMap), 2000);
+  setTimeout(function() { loadPOIs(customerMap); }, 2000);
 
-  // ═══ تحديد موقع الزبون تلقائياً ═══
+  // ═══ تحديد موقع الزبون ═══
   if (navigator.geolocation) {
     navigator.geolocation.watchPosition(
-      (pos) => {
+      function(pos) {
         customerGPSLat = pos.coords.latitude;
         customerGPSLng = pos.coords.longitude;
         
@@ -664,7 +645,7 @@ function initCustomerApp() {
           notify("✅ تم تحديد موقعك تلقائياً كنقطة انطلاق");
         }
       },
-      (err) => {
+      function(err) {
         console.error("GPS:", err);
         document.getElementById("customer-hint").textContent = 
           "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
@@ -681,8 +662,7 @@ function initCustomerApp() {
   useMyLocationBtn.style.cssText = "flex:1;background:#007bff;color:#fff;margin-left:5px";
   useMyLocationBtn.onclick = useMyLocation;
   
-  const actionsDiv = document.getElementById("customer-actions");
-  actionsDiv.appendChild(useMyLocationBtn);
+  document.getElementById("customer-actions").appendChild(useMyLocationBtn);
 
   // ═══ مربع البحث ═══
   const searchToggle = document.getElementById("search-toggle");
@@ -690,15 +670,15 @@ function initCustomerApp() {
   const searchInput = document.getElementById("search-input");
   const searchResults = document.getElementById("search-results");
   
-  searchToggle.onclick = () => {
+  searchToggle.onclick = function() {
     searchBox.classList.toggle("active");
     if (searchBox.classList.contains("active")) {
-      setTimeout(() => searchInput.focus(), 100);
+      setTimeout(function() { searchInput.focus(); }, 100);
     }
   };
   
   let searchTimeout;
-  searchInput.oninput = (e) => {
+  searchInput.oninput = function(e) {
     clearTimeout(searchTimeout);
     const q = e.target.value.trim();
     
@@ -707,7 +687,7 @@ function initCustomerApp() {
       return;
     }
     
-    searchTimeout = setTimeout(async () => {
+    searchTimeout = setTimeout(async function() {
       searchResults.innerHTML = '<div style="padding:12px;text-align:center;color:#666">🔍 جاري البحث...</div>';
       const results = await searchAddress(q);
       
@@ -717,28 +697,28 @@ function initCustomerApp() {
       }
       
       searchResults.innerHTML = "";
-      results.forEach(r => {
+      results.forEach(function(r) {
         const div = document.createElement("div");
         div.className = "search-result-item";
         div.innerHTML = 
           '<div class="title" dir="auto">📍 ' + r.name + '</div>' +
           '<div class="subtitle" dir="auto">' + r.fullName.substring(0, 80) + '...</div>';
-        div.onclick = () => selectSearchResult(r);
+        div.onclick = function() { selectSearchResult(r); };
         searchResults.appendChild(div);
       });
     }, 500);
   };
 
   // ═══ استقبال السائقين ═══
-  socket.on("drivers-list-update", (drivers) => {
-    const currentIds = new Set(drivers.map(d => d.id));
+  socket.on("drivers-list-update", function(drivers) {
+    const currentIds = new Set(drivers.map(function(d) { return d.id; }));
     for (const id in driversMarkers) {
       if (!currentIds.has(id)) {
         driversMarkers[id].remove();
         delete driversMarkers[id];
       }
     }
-    drivers.forEach(driver => {
+    drivers.forEach(function(driver) {
       const color = driver.busy ? '#dc3545' : '#28a745';
       const icon = L.divIcon({ 
         html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">🚗</div>',
@@ -750,22 +730,21 @@ function initCustomerApp() {
         driversMarkers[driver.id].setLatLng([driver.lat, driver.lng]);
         driversMarkers[driver.id].setIcon(icon);
       } else {
-        driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon })
+        driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon: icon })
           .addTo(customerMap)
           .bindPopup('<b>🚗 ' + driver.name + '</b><br>' + driver.carModel + ' — ' + driver.carPlate);
       }
     });
   });
 
-  // ═══ تحديث موقع السائق (تتبع مباشر) ═══
-  socket.on("driver-location-update", ({ driverId, lat, lng }) => {
-    if (driversMarkers[driverId]) {
-      driversMarkers[driverId].setLatLng([lat, lng]);
+  socket.on("driver-location-update", function(data) {
+    if (driversMarkers[data.driverId]) {
+      driversMarkers[data.driverId].setLatLng([data.lat, data.lng]);
     }
     
-    if (activeDriverId === driverId) {
+    if (activeDriverId === data.driverId) {
       if (driverLocationMarker) {
-        driverLocationMarker.setLatLng([lat, lng]);
+        driverLocationMarker.setLatLng([data.lat, data.lng]);
       } else {
         const driverIcon = L.divIcon({
           html: '<div style="background:#28a745;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;box-shadow:0 0 12px rgba(40,167,69,.8)">🚗</div>',
@@ -774,91 +753,79 @@ function initCustomerApp() {
           iconAnchor: [22, 22]
         });
         
-        driverLocationMarker = L.marker([lat, lng], { 
+        driverLocationMarker = L.marker([data.lat, data.lng], { 
           icon: driverIcon,
           zIndexOffset: 1000
         }).addTo(customerMap).bindPopup("🚗 سائقك في الطريق");
       }
       
-      // خط الاتصال
       if (customerGPSLat && customerGPSLng) {
         if (window.connectionLine) {
           customerMap.removeLayer(window.connectionLine);
         }
         window.connectionLine = L.polyline(
-          [[lat, lng], [customerGPSLat, customerGPSLng]],
+          [[data.lat, data.lng], [customerGPSLat, customerGPSLng]],
           { color: "#28a745", weight: 3, dashArray: "5, 5", opacity: 0.6 }
         ).addTo(customerMap);
       }
     }
   });
 
-  socket.on("search-started", ({ rideId, driversOnline }) => {
+  socket.on("search-started", function(data) {
     document.getElementById("ride-status").innerHTML = 
       '<div class="searching">' +
         '<div class="spinner"></div>' +
         '<p style="margin-top:15px"><b>⏳ جاري البحث عن سائق...</b></p>' +
-        '<p style="color:#666;font-size:14px;margin-top:5px">' + driversOnline + ' سائق متصل</p>' +
+        '<p style="color:#666;font-size:14px;margin-top:5px">' + data.driversOnline + ' سائق متصل</p>' +
         '<button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>' +
       '</div>';
   });
 
-  socket.on("search-restarted", ({ message }) => {
+  socket.on("search-restarted", function(data) {
     document.getElementById("ride-status").innerHTML = 
       '<div class="searching">' +
         '<div class="spinner"></div>' +
-        '<p style="margin-top:15px"><b>' + message + '</b></p>' +
+        '<p style="margin-top:15px"><b>' + data.message + '</b></p>' +
         '<button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button>' +
       '</div>';
-    notify(message);
+    notify(data.message);
   });
 
-  // ⚠️ السائق قبل الرحلة
-  // ⚠️ السائق قبل الرحلة
-  socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
-    activeDriverId = driver._id;
-    
-    // ⚠️ إشعار صوتي عند قبول السائق
+  socket.on("ride-accepted", function(data) {
+    activeDriverId = data.driver._id;
     playBeep("accepted");
     
-    // اهتزاز الجهاز
     if (navigator.vibrate) {
       navigator.vibrate([300, 100, 300]);
     }
+    
     document.getElementById("ride-status").innerHTML = 
       '<div class="info-card">' +
         '<h4>✅ السائق في الطريق إليك</h4>' +
-        '<p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">' + etaMin + ' دقيقة</span></p>' +
-        '<p><b>👤 الاسم:</b> ' + driver.name + '</p>' +
-        '<p><b>📞 الهاتف:</b> ' + driver.phone + '</p>' +
-        '<p><b>🚗 السيارة:</b> ' + driver.carModel + '</p>' +
-        '<p><b>🔢 اللوحة:</b> ' + driver.carPlate + '</p>' +
-        '<a href="tel:' + driver.phone + '" class="btn-call">📞 اتصال</a>' +
+        '<p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">' + data.etaMin + ' دقيقة</span></p>' +
+        '<p><b>👤 الاسم:</b> ' + data.driver.name + '</p>' +
+        '<p><b>📞 الهاتف:</b> ' + data.driver.phone + '</p>' +
+        '<p><b>🚗 السيارة:</b> ' + data.driver.carModel + '</p>' +
+        '<p><b>🔢 اللوحة:</b> ' + data.driver.carPlate + '</p>' +
+        '<a href="tel:' + data.driver.phone + '" class="btn-call">📞 اتصال</a>' +
         '<button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button>' +
       '</div>';
   });
 
-  // ⚠️ السائق وصل لموقعك
-  socket.on("driver-arrived", ({ rideId, driverId }) => {
+  socket.on("driver-arrived", function(data) {
     console.log("📍 السائق وصل لموقعك!");
-    
-    // 🔊 إشعار صوتي
     playBeep("arrived");
     
-    // 📳 اهتزاز
     if (navigator.vibrate) {
       navigator.vibrate([300, 100, 300, 100, 300]);
     }
     
-    // 💬 إشعار مرئي
     notify("📍 السائق وصل لموقعك! اخرج إليه الآن.", 8000);
     
-    // تحديث البطاقة
     const statusEl = document.getElementById("ride-status");
     if (statusEl) {
       const existingCard = statusEl.querySelector(".info-card");
       if (existingCard) {
-        // أضف شارة "وصل"
         const badge = document.createElement("p");
         badge.style.cssText = "background:#ff9800;color:#fff;padding:10px;border-radius:8px;text-align:center;font-weight:bold;margin-top:10px";
         badge.textContent = "📍 السائق وصل لموقعك!";
@@ -867,8 +834,8 @@ function initCustomerApp() {
     }
   });
 
-  socket.on("ride-cancelled", ({ rideId }) => {
-    if (currentRideId !== rideId) return;
+  socket.on("ride-cancelled", function(data) {
+    if (currentRideId !== data.rideId) return;
     if (driverLocationMarker) {
       customerMap.removeLayer(driverLocationMarker);
       driverLocationMarker = null;
@@ -882,13 +849,13 @@ function initCustomerApp() {
     currentRideId = null;
   });
 
-  customerMap.on("click", (e) => {
+  customerMap.on("click", function(e) {
     if (currentRideId) return;
     if (customerPoints.length >= 2) return;
     addCustomerPoint(e.latlng.lat, e.latlng.lng);
   });
 
-document.getElementById("request-btn").onclick = async () => {
+  document.getElementById("request-btn").onclick = async function() {
     const body = { 
       customerId: API.user.id, 
       from: { lat: customerPoints[0].lat, lng: customerPoints[0].lng, address: customerPoints[0].label },
@@ -901,55 +868,18 @@ document.getElementById("request-btn").onclick = async () => {
     });
     const ride = await res.json();
     currentRideId = ride._id;
-    socket.emit("new-ride", { ...ride, customerSocketId: socket.id });
-  };                       
-}                            
-     
-// ═══════════════════════════════════════
-// 🛣️ حساب الطريق الفعلي (OSRM)
-// ═══════════════════════════════════════
-async function getRoute(fromLat, fromLng, toLat, toLng) {
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
-    
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("OSRM error");
-    
-    const data = await res.json();
-    
-    if (!data.routes || data.routes.length === 0) {
-      return null;
-    }
-    
-    const route = data.routes[0];
-    
-    // تحويل الإحداثيات [lng, lat] → [lat, lng] لـ Leaflet
-    const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-    
-    return {
-      coordinates: coordinates,
-      distance: (route.distance / 1000).toFixed(2),   // كم
-      duration: Math.round(route.duration / 60)        // دقائق
-    };
-  } catch (err) {
-    console.error("Route error:", err);
-    return null;
-  }
+    socket.emit("new-ride", Object.assign({}, ride, { customerSocketId: socket.id }));
+  };
 }
-// ═══ إضافة نقطة (من GPS أو نقر أو بحث) ═══
+
+// ═══ إضافة نقطة ═══
 function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length >= 2) return;
   
-  customerPoints.push({
-    lat: lat,
-    lng: lng,
-    label: label || ""
-  });
+  customerPoints.push({ lat: lat, lng: lng, label: label || "" });
   
   const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
-  const markerLabel = label 
-    ? '<span dir="auto">📍 ' + label + '</span>' 
-    : defaultLabel;
+  const markerLabel = label ? "📍 " + label : defaultLabel;
   
   const newMarker = L.marker([lat, lng])
     .addTo(customerMap)
@@ -961,23 +891,18 @@ function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length === 2) {
     document.getElementById("request-btn").disabled = false;
     
-    // ═══ رسم الطريق الفعلي ═══
     const p1 = customerPoints[0];
     const p2 = customerPoints[1];
     
-    // ⚠️ ارسم خطاً مؤقتاً (مستقيماً) أولاً
     const tempLine = L.polyline(
       [[p1.lat, p1.lng], [p2.lat, p2.lng]], 
       { color: "#999", weight: 4, dashArray: "5, 10" }
     ).addTo(customerMap);
     
-    // ⚠️ ثم احصل على الطريق الفعلي
-    getRoute(p1.lat, p1.lng, p2.lat, p2.lng).then(route => {
-      // احذف الخط المؤقت
+    getRoute(p1.lat, p1.lng, p2.lat, p2.lng).then(function(route) {
       customerMap.removeLayer(tempLine);
       
       if (route) {
-        // ✅ ارسم الطريق الفعلي
         L.polyline(route.coordinates, {
           color: "#007bff",
           weight: 6,
@@ -986,18 +911,15 @@ function addCustomerPoint(lat, lng, label) {
           lineCap: "round"
         }).addTo(customerMap);
         
-        // اعرض المسافة والوقت
         document.getElementById("customer-hint").innerHTML = 
-          `✅ جاهز للطلب — ` +
-          `<b>المسافة:</b> ${route.distance} كم — ` +
-          `<b>الوقت المتوقع:</b> ${route.duration} دقيقة`;
+          "✅ جاهز للطلب — " +
+          "<b>المسافة:</b> " + route.distance + " كم — " +
+          "<b>الوقت المتوقع:</b> " + route.duration + " دقيقة";
       } else {
-        // ⚠️ إذا فشل OSRM، استخدم الخط المستقيم
         L.polyline(
           [[p1.lat, p1.lng], [p2.lat, p2.lng]], 
           { color: "blue", weight: 4 }
         ).addTo(customerMap);
-        
         document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
       }
     });
@@ -1007,7 +929,6 @@ function addCustomerPoint(lat, lng, label) {
   }
 }
 
-// ═══ زر استخدام موقعي ═══
 function useMyLocation() {
   if (!customerGPSLat || !customerGPSLng) {
     notify("⚠️ لم يتم تحديد موقعك بعد. انتظر قليلاً أو اسمح بالوصول للموقع.");
@@ -1021,7 +942,6 @@ function useMyLocation() {
   notify("✅ تم تحديد موقعك كنقطة انطلاق");
 }
 
-// ═══ اختيار نتيجة البحث ═══
 function selectSearchResult(result) {
   if (currentRideId) {
     notify("⚠️ لا يمكن التعديل أثناء رحلة");
@@ -1041,7 +961,7 @@ function selectSearchResult(result) {
   customerMap.setView([result.lat, result.lng], 15);
 }
 
-window.cancelRide = () => {
+window.cancelRide = function() {
   if (!currentRideId) return;
   if (!confirm("هل تريد إلغاء الطلب؟")) return;
   
@@ -1056,14 +976,17 @@ window.cancelRide = () => {
   clearSelection();
 };
 
-window.clearSelection = () => {
-  customerMarkers.forEach(m => m.remove());
-  customerMarkers = []; customerPoints = [];
+window.clearSelection = function() {
+  customerMarkers.forEach(function(m) { m.remove(); });
+  customerMarkers = [];
+  customerPoints = [];
   document.getElementById("request-btn").disabled = true;
   document.getElementById("customer-hint").textContent = "📍 انقر على الخريطة، أو استخدم 'استخدام موقعي'، أو ابحث بالعنوان";
   document.getElementById("ride-status").innerHTML = "";
   if (customerMap) {
-    customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
+    customerMap.eachLayer(function(l) { 
+      if (l instanceof L.Polyline) l.remove(); 
+    });
   }
 };
 
@@ -1081,11 +1004,11 @@ function initDriverApp() {
 
   driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(driverMap);
- // ═══ تحميل POI عند الحركة والزوم ═══
-  driverMap.on("moveend", () => scheduleLoadPOIs(driverMap));
-  driverMap.on("zoomend", () => scheduleLoadPOIs(driverMap));
   
-  setTimeout(() => loadPOIs(driverMap), 2000);
+  driverMap.on("moveend", function() { scheduleLoadPOIs(driverMap); });
+  driverMap.on("zoomend", function() { scheduleLoadPOIs(driverMap); });
+  
+  setTimeout(function() { loadPOIs(driverMap); }, 2000);
 
   if (!navigator.geolocation) {
     alert("⚠️ متصفحك لا يدعم تحديد الموقع");
@@ -1093,7 +1016,7 @@ function initDriverApp() {
   }
 
   navigator.geolocation.watchPosition(
-    (pos) => {
+    function(pos) {
       myLat = pos.coords.latitude;
       myLng = pos.coords.longitude;
       if (driverMarker) {
@@ -1103,17 +1026,17 @@ function initDriverApp() {
         driverMap.setView([myLat, myLng], 15);
       }
     },
-    (err) => console.error("GPS:", err),
+    function(err) { console.error("GPS:", err); },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 
-  locationInterval = setInterval(() => {
+  locationInterval = setInterval(function() {
     if (isOnline) {
       driverSocket.emit("driver-location", { driverId: API.user.id, lat: myLat, lng: myLng });
     }
   }, LOCATION_UPDATE_INTERVAL);
 
-  document.getElementById("toggle-online").onclick = () => {
+  document.getElementById("toggle-online").onclick = function() {
     isOnline = !isOnline;
     const btn = document.getElementById("toggle-online");
     btn.textContent = isOnline ? "⛔ إيقاف الاستقبال" : "🟢 ابدأ استقبال الطلبات";
@@ -1135,39 +1058,35 @@ function initDriverApp() {
     }
   };
 
-   driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
-    currentRide = { _id: rideId, ...ride, etaMin };
+  driverSocket.on("ride-confirmed", function(data) {
+    currentRide = Object.assign({ _id: data.rideId }, data.ride, { etaMin: data.etaMin });
     
-    document.getElementById("requests-list").innerHTML = `
-      <div class="info-card">
-        <h4>🧍 بيانات الزبون</h4>
-        <p><b>👤 الاسم:</b> ${ride.customer?.name || "غير معروف"}</p>
-        <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
-        <p><b>📍 الانطلاق:</b> ${ride.from.address || "موقع الزبون"}</p>
-        <p><b>🏁 الوجهة:</b> ${ride.to.address || "الوجهة"}</p>
-        <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
-        <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
-        <button class="btn-arrived" style="background:#ff9800;color:#fff;margin-top:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer" onclick="arrivedAtCustomer()">
-          📍 وصلت لموقع الزبون
-        </button>
-        <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
-        <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
-      </div>
-    `;
+    document.getElementById("requests-list").innerHTML = 
+      '<div class="info-card">' +
+        '<h4>🧍 بيانات الزبون</h4>' +
+        '<p><b>👤 الاسم:</b> ' + (data.ride.customer ? data.ride.customer.name : "غير معروف") + '</p>' +
+        '<p><b>📞 الهاتف:</b> ' + (data.ride.customer ? data.ride.customer.phone : "غير معروف") + '</p>' +
+        '<p><b>📍 الانطلاق:</b> ' + (data.ride.from.address || "موقع الزبون") + '</p>' +
+        '<p><b>🏁 الوجهة:</b> ' + (data.ride.to.address || "الوجهة") + '</p>' +
+        '<p><b>⏱️ وقت الوصول:</b> ' + data.etaMin + ' دقيقة</p>' +
+        '<a href="tel:' + (data.ride.customer ? data.ride.customer.phone : "") + '" class="btn-call">📞 اتصال بالزبون</a>' +
+        '<button class="btn-arrived" style="background:#ff9800;color:#fff;margin-top:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer" onclick="arrivedAtCustomer()">📍 وصلت لموقع الزبون</button>' +
+        '<button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>' +
+        '<button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>' +
+      '</div>';
     
-    const fromLat = ride.from.lat, fromLng = ride.from.lng;
-    const toLat = ride.to.lat, toLng = ride.to.lng;
+    const fromLat = data.ride.from.lat, fromLng = data.ride.from.lng;
+    const toLat = data.ride.to.lat, toLng = data.ride.to.lng;
     
     L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
     L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
     
-    // ═══ احصل على الطريق الفعلي للسائق ═══
     const tempLine = L.polyline(
       [[fromLat, fromLng], [toLat, toLng]], 
       { color: "#999", weight: 4, dashArray: "5, 10" }
     ).addTo(driverMap);
     
-    getRoute(fromLat, fromLng, toLat, toLng).then(route => {
+    getRoute(fromLat, fromLng, toLat, toLng).then(function(route) {
       driverMap.removeLayer(tempLine);
       
       if (route) {
@@ -1178,8 +1097,7 @@ function initDriverApp() {
           lineJoin: "round",
           lineCap: "round"
         }).addTo(driverMap);
-        
-        console.log(`🛣️ المسار: ${route.distance} كم — ${route.duration} دقيقة`);
+        console.log("🛣️ المسار: " + route.distance + " كم — " + route.duration + " دقيقة");
       } else {
         L.polyline(
           [[fromLat, fromLng], [toLat, toLng]], 
@@ -1187,12 +1105,12 @@ function initDriverApp() {
         ).addTo(driverMap);
       }
     });
-    driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
     
+    driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
     notify("✅ تم تأكيد القبول");
   });
 
-  driverSocket.on("ride-request", (ride) => {
+  driverSocket.on("ride-request", function(ride) {
     if (currentRide) return;
     if (document.getElementById("ride-" + ride._id)) return;
     
@@ -1201,56 +1119,55 @@ function initDriverApp() {
     card.id = "ride-" + ride._id;
     
     const distanceInfo = ride.distanceToCustomer 
-      ? `<p style="color:#28a745;font-weight:bold">📏 المسافة: ${ride.distanceToCustomer} كم</p>
-         <p style="color:#007bff;font-weight:bold">⏱️ الوصول المتوقع: ${ride.etaMin} دقيقة</p>` 
+      ? '<p style="color:#28a745;font-weight:bold">📏 المسافة: ' + ride.distanceToCustomer + ' كم</p>' +
+        '<p style="color:#007bff;font-weight:bold">⏱️ الوصول المتوقع: ' + ride.etaMin + ' دقيقة</p>'
       : "";
     
-    card.innerHTML = `
-      <h4>🚕 طلب جديد</h4>
-      ${distanceInfo}
-      <p><b>👤 الزبون:</b> ${ride.customer?.name || "غير معروف"}</p>
-      <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
-      <p><b>📍 من:</b> ${ride.from.address || "موقع الزبون"}</p>
-      <p><b>🏁 إلى:</b> ${ride.to.address || "الوجهة"}</p>
-      <button class="btn-accept" onclick="acceptRide('${ride._id}', ${ride.etaMin || 0})">
-        ✅ قبول الطلب
-      </button>
-    `;
-        document.getElementById("requests-list").appendChild(card);
+    card.innerHTML = 
+      '<h4>🚕 طلب جديد</h4>' +
+      distanceInfo +
+      '<p><b>👤 الزبون:</b> ' + (ride.customer ? ride.customer.name : "غير معروف") + '</p>' +
+      '<p><b>📞 الهاتف:</b> ' + (ride.customer ? ride.customer.phone : "غير معروف") + '</p>' +
+      '<p><b>📍 من:</b> ' + (ride.from.address || "موقع الزبون") + '</p>' +
+      '<p><b>🏁 إلى:</b> ' + (ride.to.address || "الوجهة") + '</p>' +
+      '<button class="btn-accept" onclick="acceptRide(\'' + ride._id + '\', ' + (ride.etaMin || 0) + ')">✅ قبول الطلب</button>';
     
-    // ⚠️ إشعار صوتي عند وصول طلب جديد
+    document.getElementById("requests-list").appendChild(card);
+    
     playBeep("new_ride");
     
-    // اهتزاز الجهاز (للهاتف)
     if (navigator.vibrate) {
       navigator.vibrate([200, 100, 200, 100, 200]);
     }
     
-    notify(`🚕 طلب جديد — ${ride.distanceToCustomer} كم`);
+    notify("🚕 طلب جديد — " + ride.distanceToCustomer + " كم");
   });
 
-  driverSocket.on("ride-removed", ({ rideId }) => {
-    const card = document.getElementById("ride-" + rideId);
+  driverSocket.on("ride-removed", function(data) {
+    const card = document.getElementById("ride-" + data.rideId);
     if (card) card.remove();
-    if (currentRide && currentRide._id === rideId) {
+    if (currentRide && currentRide._id === data.rideId) {
       currentRide = null;
       document.getElementById("requests-list").innerHTML = "";
-      driverMap.eachLayer(l => {
+      driverMap.eachLayer(function(l) {
         if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
       });
     }
   });
-}
-  driverSocket.on("ride-unavailable", ({ rideId }) => {
-    document.getElementById("ride-" + rideId)?.remove();
+
+  driverSocket.on("ride-unavailable", function(data) {
+    const card = document.getElementById("ride-" + data.rideId);
+    if (card) card.remove();
     notify("⚠️ الرحلة اتخذها سائق آخر");
   });
-  driverSocket.on("customer-cancelled", ({ rideId }) => {
-    document.getElementById("ride-" + rideId)?.remove();
-    if (currentRide && currentRide._id === rideId) {
+
+  driverSocket.on("customer-cancelled", function(data) {
+    const card = document.getElementById("ride-" + data.rideId);
+    if (card) card.remove();
+    if (currentRide && currentRide._id === data.rideId) {
       currentRide = null;
       document.getElementById("requests-list").innerHTML = "";
-      driverMap.eachLayer(l => {
+      driverMap.eachLayer(function(l) {
         if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
       });
       notify("⚠️ الزبون ألغى الطلب");
@@ -1258,10 +1175,8 @@ function initDriverApp() {
   });
 }
 
-// ═══════════════════════════════════════
-// 📍 إشعار الزبون بوصول السائق
-// ═══════════════════════════════════════
-window.arrivedAtCustomer = () => {
+// ═══ إشعار الزبون بوصول السائق ═══
+window.arrivedAtCustomer = function() {
   if (!currentRide) return;
   if (!confirm("هل وصلت لموقع الزبون؟")) return;
   
@@ -1273,7 +1188,6 @@ window.arrivedAtCustomer = () => {
   playBeep("arrived");
   notify("✅ تم إشعار الزبون");
   
-  // تحديث الزر
   const btn = document.querySelector(".btn-arrived");
   if (btn) {
     btn.textContent = "✅ تم إشعار الزبون";
@@ -1281,21 +1195,22 @@ window.arrivedAtCustomer = () => {
     btn.style.background = "#28a745";
   }
 };
-window.acceptRide = (rideId, etaMin) => {
+
+window.acceptRide = function(rideId, etaMin) {
   driverSocket.emit("accept-ride", { 
-    rideId, 
+    rideId: rideId, 
     driverId: API.user.id, 
-    etaMin 
+    etaMin: etaMin 
   });
   
   const card = document.getElementById("ride-" + rideId);
-  if (card) currentRide = { _id: rideId, etaMin };
+  if (card) currentRide = { _id: rideId, etaMin: etaMin };
   
   document.getElementById("requests-list").innerHTML = "";
   notify("⏳ جاري تأكيد القبول...");
 };
 
-window.cancelRideDriver = () => {
+window.cancelRideDriver = function() {
   if (!currentRide) return;
   if (!confirm("هل تريد إلغاء الطلب؟ سيتم البحث عن سائق آخر للزبون.")) return;
   
@@ -1306,14 +1221,14 @@ window.cancelRideDriver = () => {
   
   currentRide = null;
   document.getElementById("requests-list").innerHTML = "";
-  driverMap.eachLayer(l => {
+  driverMap.eachLayer(function(l) {
     if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
   });
   driverMap.setView([myLat, myLng], 15);
   notify("✅ تم إلغاء الطلب");
 };
 
-window.completeRide = () => {
+window.completeRide = function() {
   if (!currentRide) return;
   driverSocket.emit("ride-completed", { 
     driverId: API.user.id, 
@@ -1321,13 +1236,12 @@ window.completeRide = () => {
   });
   currentRide = null;
   document.getElementById("requests-list").innerHTML = "";
-  driverMap.eachLayer(l => {
+  driverMap.eachLayer(function(l) {
     if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove();
   });
   driverMap.setView([myLat, myLng], 15);
   notify("✅ تم إنهاء الرحلة");
 };
-
 </script>
 </body>
 </html>
