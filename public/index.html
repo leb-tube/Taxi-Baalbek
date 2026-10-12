@@ -421,12 +421,15 @@ const poiClientCache = new Map();
 const POI_CLIENT_TTL = 5 * 60 * 1000; // 5 دقائق
 
 // ═══ Debounce ═══
+// ═══ Debounce طويل + cache ═══
 let poiDebounceTimeout = null;
+const poiClientCache = new Map();
+const POI_CLIENT_TTL = 10 * 60 * 1000; // 10 دقائق
+
 function scheduleLoadPOIs(map) {
   clearTimeout(poiDebounceTimeout);
-  poiDebounceTimeout = setTimeout(() => loadPOIs(map), 800);
+  poiDebounceTimeout = setTimeout(() => loadPOIs(map), 1500); // ← زدناها 1500ms
 }
-
 async function loadPOIs(map) {
   const bounds = map.getBounds();
   const zoom = map.getZoom();

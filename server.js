@@ -19,6 +19,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("io", io);
 
 // ═══ مسح قاعدة البيانات (للاختبار) ═══
+// ═══ Cache للـ POI ═══
+const poiCache = new Map();
+const POI_CACHE_TTL = 30 * 60 * 1000; // 30 دقيقة
 // ═══ Proxy لـ Overpass API (POI) ═══
 app.post("/api/pois", async (req, res) => {
   try {
@@ -29,39 +32,67 @@ app.post("/api/pois", async (req, res) => {
     const servers = [
       "https://overpass-api.de/api/interpreter",
       "https://overpass.kumi.systems/api/interpreter",
-      "https://overpass.openstreetmap.ru/api/interpreter"
+      "https://overpass.openstreetmap.ru/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter"
     ];
+        // ═══ تحقق من Cache ═══
+    const cacheKey = query.substring(0, 200);
+    const cached = poiCache.get(cacheKey);
     
+    if (cached && Date.now() - cached.time < POI_CACHE_TTL) {
+      console.log("📦 POIs from server cache");
+      return res.json(cached.data);
+    }
     let lastError = null;
     
     for (const server of servers) {
       try {
+        console.log("📡 Trying:", server);
+        
+        // ⚠️ timeout 15 ثانية
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
         const response = await fetch(server, {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": "TaxiBaalbek/1.0"
           },
-          body: "data=" + encodeURIComponent(query)
+          body: "data=" + encodeURIComponent(query),
+          signal: controller.signal
         });
         
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
-          lastError = "Server " + server + " returned " + response.status;
+          lastError = server + " returned " + response.status;
+          console.log("⚠️", lastError);
           continue;
         }
         
         const text = await response.text();
         
-        // تحقق أنه JSON (ليس XML)
+        // تحقق أنه JSON
         if (text.trim().startsWith("<")) {
-          lastError = "Server " + server + " returned XML (error)";
+          lastError = server + " returned XML";
+          console.log("⚠️", lastError);
           continue;
         }
         
         const data = JSON.parse(text);
+        console.log("✅ Success from", server, "-", data.elements?.length || 0, "elements");
+        
+        // ⚠️ احفظ في cache السيرفر
+        poiCache.set(query.substring(0, 200), { 
+          data: data, 
+          time: Date.now() 
+        });
+        
         return res.json(data);
       } catch (err) {
-        lastError = err.message;
+        lastError = server + ": " + err.message;
+        console.log("❌", lastError);
         continue;
       }
     }
