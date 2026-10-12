@@ -435,9 +435,11 @@ async function searchAddress(query) {
 }
 
 // ═══ Debounce طويل + cache ═══
+// ═══ Debounce + Cache + Loading للـ POI ═══
 let poiDebounceTimeout = null;
+let poiLoading = false;                     // ← ⚠️ هذا السطر الناقص
 const poiClientCache = new Map();
-const POI_CLIENT_TTL = 10 * 60 * 1000; // 10 دقائق
+const POI_CLIENT_TTL = 10 * 60 * 1000;
 
 function scheduleLoadPOIs(map) {
   clearTimeout(poiDebounceTimeout);
