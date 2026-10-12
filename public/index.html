@@ -866,7 +866,7 @@ function initCustomerApp() {
       }
     }
   });
-}
+
   socket.on("ride-cancelled", ({ rideId }) => {
     if (currentRideId !== rideId) return;
     if (driverLocationMarker) {
@@ -888,7 +888,7 @@ function initCustomerApp() {
     addCustomerPoint(e.latlng.lat, e.latlng.lng);
   });
 
-  document.getElementById("request-btn").onclick = async () => {
+document.getElementById("request-btn").onclick = async () => {
     const body = { 
       customerId: API.user.id, 
       from: { lat: customerPoints[0].lat, lng: customerPoints[0].lng, address: customerPoints[0].label },
@@ -902,11 +902,9 @@ function initCustomerApp() {
     const ride = await res.json();
     currentRideId = ride._id;
     socket.emit("new-ride", { ...ride, customerSocketId: socket.id });
-  };
-}
-  
- 
-    
+  };                       
+}                            
+     
 // ═══════════════════════════════════════
 // 🛣️ حساب الطريق الفعلي (OSRM)
 // ═══════════════════════════════════════
@@ -1329,6 +1327,7 @@ window.completeRide = () => {
   driverMap.setView([myLat, myLng], 15);
   notify("✅ تم إنهاء الرحلة");
 };
+}
 </script>
 </body>
 </html>
