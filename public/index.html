@@ -238,6 +238,76 @@ function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); 
   document.getElementById(id).classList.add("active"); 
 }
+// ═══════════════════════════════════════
+// 🔔 إشعار صوتي (بدون ملفات)
+// ═══════════════════════════════════════
+function playBeep(type = "default") {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // ═══ أنواع مختلفة من الأصوات ═══
+    const sounds = {
+      // طلب جديد للسائق (نغمة عالية متكررة)
+      new_ride: [
+        { freq: 800, duration: 0.15, delay: 0 },
+        { freq: 1000, duration: 0.15, delay: 0.2 },
+        { freq: 800, duration: 0.15, delay: 0.4 },
+        { freq: 1000, duration: 0.3, delay: 0.6 }
+      ],
+      // قبول السائق للزبون (نغمة صاعدة)
+      accepted: [
+        { freq: 523, duration: 0.15, delay: 0 },
+        { freq: 659, duration: 0.15, delay: 0.15 },
+        { freq: 784, duration: 0.3, delay: 0.3 }
+      ],
+      // وصول السائق (نغمة مميزة)
+      arrived: [
+        { freq: 660, duration: 0.2, delay: 0 },
+        { freq: 880, duration: 0.2, delay: 0.25 },
+        { freq: 660, duration: 0.2, delay: 0.5 },
+        { freq: 880, duration: 0.4, delay: 0.75 }
+      ]
+    };
+    
+    const notes = sounds[type] || sounds.accepted;
+    
+    notes.forEach(note => {
+      setTimeout(() => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.frequency.value = note.freq;
+        osc.type = "sine";
+        
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + note.duration);
+        
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + note.duration);
+      }, note.delay * 1000);
+    });
+  } catch (err) {
+    console.error("Sound error:", err);
+  }
+}
+
+// ⚠️ يجب تشغيل صوت واحد بعد تفاعل المستخدم
+// Chrome يمنع التشغيل التلقائي
+document.addEventListener("click", () => {
+  if (!window.audioEnabled) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.resume();
+      window.audioEnabled = true;
+      console.log("🔊 Audio enabled");
+    } catch (e) {}
+  }
+}, { once: true });
+
+function notify(msg, duration = 3500) {
 function notify(msg, duration = 3500) {
   const el = document.getElementById("notification");
   el.textContent = msg;
@@ -744,8 +814,17 @@ function initCustomerApp() {
   });
 
   // ⚠️ السائق قبل الرحلة
+  // ⚠️ السائق قبل الرحلة
   socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
     activeDriverId = driver._id;
+    
+    // ⚠️ إشعار صوتي عند قبول السائق
+    playBeep("accepted");
+    
+    // اهتزاز الجهاز
+    if (navigator.vibrate) {
+      navigator.vibrate([300, 100, 300]);
+    }
     document.getElementById("ride-status").innerHTML = 
       '<div class="info-card">' +
         '<h4>✅ السائق في الطريق إليك</h4>' +
@@ -757,6 +836,35 @@ function initCustomerApp() {
         '<a href="tel:' + driver.phone + '" class="btn-call">📞 اتصال</a>' +
         '<button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button>' +
       '</div>';
+  });
+
+  // ⚠️ السائق وصل لموقعك
+  socket.on("driver-arrived", ({ rideId, driverId }) => {
+    console.log("📍 السائق وصل لموقعك!");
+    
+    // 🔊 إشعار صوتي
+    playBeep("arrived");
+    
+    // 📳 اهتزاز
+    if (navigator.vibrate) {
+      navigator.vibrate([300, 100, 300, 100, 300]);
+    }
+    
+    // 💬 إشعار مرئي
+    notify("📍 السائق وصل لموقعك! اخرج إليه الآن.", 8000);
+    
+    // تحديث البطاقة
+    const statusEl = document.getElementById("ride-status");
+    if (statusEl) {
+      const existingCard = statusEl.querySelector(".info-card");
+      if (existingCard) {
+        // أضف شارة "وصل"
+        const badge = document.createElement("p");
+        badge.style.cssText = "background:#ff9800;color:#fff;padding:10px;border-radius:8px;text-align:center;font-weight:bold;margin-top:10px";
+        badge.textContent = "📍 السائق وصل لموقعك!";
+        existingCard.appendChild(badge);
+      }
+    }
   });
 
   socket.on("ride-cancelled", ({ rideId }) => {
@@ -1029,7 +1137,7 @@ function initDriverApp() {
     }
   };
 
-  driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
+   driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
     currentRide = { _id: rideId, ...ride, etaMin };
     
     document.getElementById("requests-list").innerHTML = `
@@ -1041,6 +1149,9 @@ function initDriverApp() {
         <p><b>🏁 الوجهة:</b> ${ride.to.address || "الوجهة"}</p>
         <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
         <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
+        <button class="btn-arrived" style="background:#ff9800;color:#fff;margin-top:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer" onclick="arrivedAtCustomer()">
+          📍 وصلت لموقع الزبون
+        </button>
         <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
         <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
       </div>
@@ -1107,7 +1218,16 @@ function initDriverApp() {
         ✅ قبول الطلب
       </button>
     `;
-    document.getElementById("requests-list").appendChild(card);
+        document.getElementById("requests-list").appendChild(card);
+    
+    // ⚠️ إشعار صوتي عند وصول طلب جديد
+    playBeep("new_ride");
+    
+    // اهتزاز الجهاز (للهاتف)
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+    
     notify(`🚕 طلب جديد — ${ride.distanceToCustomer} كم`);
   });
 
@@ -1139,7 +1259,29 @@ function initDriverApp() {
     }
   });
 }
-
+// ═══════════════════════════════════════
+// 📍 إشعار الزبون بوصول السائق
+// ═══════════════════════════════════════
+window.arrivedAtCustomer = () => {
+  if (!currentRide) return;
+  if (!confirm("هل وصلت لموقع الزبون؟")) return;
+  
+  driverSocket.emit("driver-arrived", { 
+    rideId: currentRide._id,
+    driverId: API.user.id
+  });
+  
+  playBeep("arrived");
+  notify("✅ تم إشعار الزبون");
+  
+  // تحديث الزر
+  const btn = document.querySelector(".btn-arrived");
+  if (btn) {
+    btn.textContent = "✅ تم إشعار الزبون";
+    btn.disabled = true;
+    btn.style.background = "#28a745";
+  }
+};
 window.acceptRide = (rideId, etaMin) => {
   driverSocket.emit("accept-ride", { 
     rideId, 

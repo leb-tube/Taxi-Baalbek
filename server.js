@@ -583,6 +583,27 @@ io.on("connection", (socket) => {
 
     io.emit("drivers-list-update", getDriversPublicList());
   });
+  // ═══ السائق وصل لموقع الزبون ═══
+  socket.on("driver-arrived", async ({ rideId, driverId }) => {
+    console.log(`📍 السائق ${driverId} وصل للرحلة ${rideId}`);
+    
+    const active = activeRides.get(rideId);
+    if (!active) return;
+    
+    // ⚠️ أبلغ الزبون
+    if (active.customerSocketId) {
+      io.to(active.customerSocketId).emit("driver-arrived", {
+        rideId,
+        driverId
+      });
+    }
+    
+    // ⚠️ حدّث حالة الرحلة في قاعدة البيانات
+    await Ride.findByIdAndUpdate(rideId, {
+      driverArrived: true,
+      driverArrivedAt: new Date()
+    }).catch(() => {});
+  });
 
   // ═══ إنهاء الرحلة ═══
   socket.on("ride-completed", async ({ driverId, rideId }) => {
