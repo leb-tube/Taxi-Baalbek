@@ -85,7 +85,7 @@ app.get("/api/pois", async (req, res) => {
       "categories=" + encodeURIComponent(categories) +
       "&filter=rect:" + west + "," + south + "," + east + "," + north +
       "&limit=" + limit +
-      "&apiKey=" + GEOAPIFY_KEY;
+      "&apiKey=" + 05514bb178d74ba293069a7bb9e6723b;
     
     console.log("📡 Geoapify request...");
     
