@@ -1139,6 +1139,7 @@ function initDriverApp() {
       notify("⚠️ الزبون ألغى الطلب");
     }
   });
+}  
 window.acceptRide = (rideId, etaMin) => {
   driverSocket.emit("accept-ride", { 
     rideId, 
