@@ -1127,7 +1127,6 @@ function initDriverApp() {
     document.getElementById("ride-" + rideId)?.remove();
     notify("⚠️ الرحلة اتخذها سائق آخر");
   });
-
   driverSocket.on("customer-cancelled", ({ rideId }) => {
     document.getElementById("ride-" + rideId)?.remove();
     if (currentRide && currentRide._id === rideId) {
@@ -1139,7 +1138,8 @@ function initDriverApp() {
       notify("⚠️ الزبون ألغى الطلب");
     }
   });
-}  
+}
+
 window.acceptRide = (rideId, etaMin) => {
   driverSocket.emit("accept-ride", { 
     rideId, 
