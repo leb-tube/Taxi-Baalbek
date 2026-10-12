@@ -416,11 +416,8 @@ async function searchAddress(query) {
   }
 }
 
-// ═══ Cache للـ POI ═══
-const poiClientCache = new Map();
-const POI_CLIENT_TTL = 5 * 60 * 1000; // 5 دقائق
+ 
 
-// ═══ Debounce ═══
 // ═══ Debounce طويل + cache ═══
 let poiDebounceTimeout = null;
 const poiClientCache = new Map();
@@ -436,10 +433,10 @@ async function loadPOIs(map) {
   
   if (zoom < 14) return;
   
-  const south = bounds.getSouth().toFixed(3);
-  const west = bounds.getWest().toFixed(3);
-  const north = bounds.getNorth().toFixed(3);
-  const east = bounds.getEast().toFixed(3);
+  const south = bounds.getSouth().toFixed(2);
+  const west = bounds.getWest().toFixed(2);
+  const north = bounds.getNorth().toFixed(2);
+  const east = bounds.getEast().toFixed(2);
   
   // ═══ Cache Key ═══
   const cacheKey = `${zoom}_${south}_${west}_${north}_${east}`;
