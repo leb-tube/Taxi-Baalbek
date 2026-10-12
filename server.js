@@ -1,4 +1,7 @@
-﻿require("dotenv").config();
+﻿// ═══════════════════════════════════════════════════════════
+// 🚕 Taxi Baalbek - Server
+// ═══════════════════════════════════════════════════════════
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -10,6 +13,7 @@ const rideRoutes = require("./routes/rides");
 const Ride = require("./models/Ride");
 const User = require("./models/User");
 
+// ═══ App Setup ═══
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -18,24 +22,26 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.set("io", io);
 
-// ═══ مسح قاعدة البيانات (للاختبار) ═══
-// ═══ Cache للـ POI ═══
+// ═══════════════════════════════════════════════════════════
+// 🗺️ POI Cache (in-memory)
+// ═══════════════════════════════════════════════════════════
 const poiCache = new Map();
 const POI_CACHE_TTL = 30 * 60 * 1000; // 30 دقيقة
-// ═══ Proxy لـ Overpass API (POI) ═══
+const POI_CACHE_MAX_SIZE = 500;
+
+// ═══════════════════════════════════════════════════════════
+// 🗺️ Overpass API Proxy (POI)
+// ═══════════════════════════════════════════════════════════
 app.post("/api/pois", async (req, res) => {
+  const startTime = Date.now();
+  
   try {
     const query = req.body.query;
-    if (!query) return res.status(400).json({ error: "Query required" });
+    if (!query) {
+      return res.status(400).json({ error: "Query required" });
+    }
     
-    // سيرفرات Overpass البديلة
-    const servers = [
-      "https://overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter",
-      "https://overpass.openstreetmap.ru/api/interpreter",
-      "https://overpass.private.coffee/api/interpreter"
-    ];
-        // ═══ تحقق من Cache ═══
+    // ═══ Cache Check ═══
     const cacheKey = query.substring(0, 200);
     const cached = poiCache.get(cacheKey);
     
@@ -43,21 +49,30 @@ app.post("/api/pois", async (req, res) => {
       console.log("📦 POIs from server cache");
       return res.json(cached.data);
     }
-    let lastError = null;
     
+    // ═══ Overpass Servers (بالترتيب) ═══
+    const servers = [
+      { url: "https://overpass-api.de/api/interpreter", name: "main" },
+      { url: "https://overpass.kumi.systems/api/interpreter", name: "kumi" },
+      { url: "https://overpass.openstreetmap.ru/api/interpreter", name: "ru" },
+      { url: "https://overpass.private.coffee/api/interpreter", name: "coffee" }
+    ];
+    
+    const errors = [];
+    
+    // ═══ جرب كل سيرفر بالتتابع ═══
     for (const server of servers) {
       try {
-        console.log("📡 Trying:", server);
+        console.log(`📡 [${server.name}] Trying...`);
         
-        // ⚠️ timeout 15 ثانية
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         
-        const response = await fetch(server, {
+        const response = await fetch(server.url, {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "TaxiBaalbek/1.0"
+            "User-Agent": "TaxiBaalbek/1.0 (contact@taxi-baalbek.onrender.com)"
           },
           body: "data=" + encodeURIComponent(query),
           signal: controller.signal
@@ -66,43 +81,84 @@ app.post("/api/pois", async (req, res) => {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-          lastError = server + " returned " + response.status;
-          console.log("⚠️", lastError);
+          const err = `${server.name}: HTTP ${response.status}`;
+          errors.push(err);
+          console.log("⚠️", err);
           continue;
         }
         
         const text = await response.text();
         
-        // تحقق أنه JSON
-        if (text.trim().startsWith("<")) {
-          lastError = server + " returned XML";
-          console.log("⚠️", lastError);
+        // ⚠️ تحقق أنه JSON (ليس XML/HTML)
+        if (!text || text.trim().startsWith("<")) {
+          const err = `${server.name}: returned XML/HTML`;
+          errors.push(err);
+          console.log("⚠️", err);
           continue;
         }
         
-        const data = JSON.parse(text);
-        console.log("✅ Success from", server, "-", data.elements?.length || 0, "elements");
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (parseErr) {
+          const err = `${server.name}: JSON parse error`;
+          errors.push(err);
+          console.log("⚠️", err);
+          continue;
+        }
         
-        // ⚠️ احفظ في cache السيرفر
-        poiCache.set(query.substring(0, 200), { 
+        if (!data.elements) {
+          const err = `${server.name}: no elements field`;
+          errors.push(err);
+          console.log("⚠️", err);
+          continue;
+        }
+        
+        // ═══ نجاح! ═══
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${server.name}] ${data.elements.length} elements in ${duration}ms`);
+        
+        // احفظ في cache
+        poiCache.set(cacheKey, { 
           data: data, 
           time: Date.now() 
         });
         
+        // نظّف cache القديم إذا كبر جداً
+        if (poiCache.size > POI_CACHE_MAX_SIZE) {
+          const oldestKeys = [...poiCache.keys()].slice(0, 100);
+          oldestKeys.forEach(k => poiCache.delete(k));
+          console.log(`🧹 Cleaned POI cache (size: ${poiCache.size})`);
+        }
+        
         return res.json(data);
+        
       } catch (err) {
-        lastError = server + ": " + err.message;
-        console.log("❌", lastError);
+        const errMsg = `${server.name}: ${err.message}`;
+        errors.push(errMsg);
+        console.log("❌", errMsg);
         continue;
       }
     }
     
-    res.status(500).json({ error: "All Overpass servers failed: " + lastError });
+    // ═══ كل السيرفرات فشلت ═══
+    console.error("❌ All Overpass servers failed:");
+    errors.forEach(e => console.error("   -", e));
+    
+    return res.status(500).json({ 
+      error: "All Overpass servers failed",
+      details: errors
+    });
+    
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("❌ POI route error:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
-// ═══ Proxy للبحث بالعنوان ═══
+
+// ═══════════════════════════════════════════════════════════
+// 🔍 Search Proxy (Nominatim)
+// ═══════════════════════════════════════════════════════════
 app.get("/api/search", async (req, res) => {
   try {
     const query = req.query.q;
@@ -110,7 +166,9 @@ app.get("/api/search", async (req, res) => {
       return res.json([]);
     }
     
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=lb&limit=8&addressdetails=1&accept-language=ar`;
+    const url = "https://nominatim.openstreetmap.org/search?" +
+      "format=json&q=" + encodeURIComponent(query) +
+      "&countrycodes=lb&limit=8&addressdetails=1&accept-language=ar";
     
     const response = await fetch(url, {
       headers: {
@@ -133,11 +191,20 @@ app.get("/api/search", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// 📚 Routes
+// ═══════════════════════════════════════════════════════════
 app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
-// ═══ MongoDB ═══
+
+// ═══════════════════════════════════════════════════════════
+// 🗄️ MongoDB Connection
+// ═══════════════════════════════════════════════════════════
 console.log("🔄 Attempting MongoDB connection...");
-console.log("📍 MONGO_URI:", process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 60) + "..." : "❌ MISSING!");
+console.log("📍 MONGO_URI:", process.env.MONGO_URI 
+  ? process.env.MONGO_URI.substring(0, 60) + "..." 
+  : "❌ MISSING!");
 
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 10000,
@@ -148,18 +215,24 @@ mongoose.connect(process.env.MONGO_URI, {
     console.error("❌ MongoDB connection FAILED:", err.message);
   });
 
-// ═══ الإعدادات ═══
+// ═══════════════════════════════════════════════════════════
+// ⚙️ Settings
+// ═══════════════════════════════════════════════════════════
 const SEARCH_RADIUS_KM = parseFloat(process.env.SEARCH_RADIUS_KM) || 10;
 const SEND_TO_NEAREST_ONLY = process.env.SEND_TO_NEAREST_ONLY === "true";
 const FALLBACK_TO_ALL = process.env.FALLBACK_TO_ALL === "true";
 const AVG_SPEED_KMH = 30;
 
-// ═══ الذاكرة ═══
+// ═══════════════════════════════════════════════════════════
+// 💾 In-Memory Storage
+// ═══════════════════════════════════════════════════════════
 const onlineDrivers = new Map();
 const pendingRides = new Map();
 const activeRides = new Map();
 
-// ═══ أدوات ═══
+// ═══════════════════════════════════════════════════════════
+// 🛠️ Helper Functions
+// ═══════════════════════════════════════════════════════════
 function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -269,9 +342,9 @@ function startSearchLoop(rideId) {
   if (p) p.interval = interval;
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // 🔌 Socket.IO
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 io.on("connection", (socket) => {
   console.log("🔌 connected:", socket.id);
 
@@ -292,6 +365,7 @@ io.on("connection", (socket) => {
     console.log(`🚗 سائق متصل: ${name}`);
     io.emit("drivers-list-update", getDriversPublicList());
 
+    // أرسل الطلبات المعلقة
     for (const [, pending] of pendingRides.entries()) {
       const dist = calculateDistance(pending.ride.from.lat, pending.ride.from.lng, lat, lng);
       if (dist <= SEARCH_RADIUS_KM * 2) {
@@ -374,7 +448,6 @@ io.on("connection", (socket) => {
     const customerSocketId = pendingRides.get(rideId)?.customerSocketId;
     stopSearching(rideId);
 
-    // احسب ETA من موقع السائق الحقيقي
     const driverInfo = onlineDrivers.get(driverId);
     let etaMin = 5;
     let distKm = 0;
@@ -470,7 +543,7 @@ io.on("connection", (socket) => {
       if (d) d.busy = false;
     }
 
-    // إذا ألغى الزبون — أبلغ السائق
+    // الزبون ألغى — أبلغ السائق
     if (cancelledBy === "customer") {
       if (active && active.driverSocketId) {
         io.to(active.driverSocketId).emit("customer-cancelled", { rideId });
@@ -480,7 +553,7 @@ io.on("connection", (socket) => {
       }
     }
 
-    // إذا ألغى السائق — أعد البحث للزبون
+    // السائق ألغى — أعد البحث
     if (cancelledBy === "driver" && customerSocketId) {
       const ride = await Ride.findById(rideId).populate("customer", "name phone");
       if (ride) {
@@ -516,7 +589,7 @@ io.on("connection", (socket) => {
     io.emit("drivers-list-update", getDriversPublicList());
   });
 
-  // ═══ عند فصل الاتصال ═══
+  // ═══ انقطاع الاتصال ═══
   socket.on("disconnect", () => {
     if (socket.driverId) {
       onlineDrivers.delete(socket.driverId);
@@ -526,7 +599,9 @@ io.on("connection", (socket) => {
   });
 });
 
-// ═══ تنظيف السائقين غير النشطين ═══
+// ═══════════════════════════════════════════════════════════
+// 🧹 Cleanup: إزالة السائقين غير النشطين
+// ═══════════════════════════════════════════════════════════
 setInterval(() => {
   const now = Date.now();
   for (const [driverId, info] of onlineDrivers.entries()) {
@@ -537,6 +612,9 @@ setInterval(() => {
   }
 }, 30000);
 
+// ═══════════════════════════════════════════════════════════
+// 🚀 Start Server
+// ═══════════════════════════════════════════════════════════
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
