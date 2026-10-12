@@ -486,7 +486,10 @@ async function loadPOIs(map) {
     poiClientCache.set(cacheKey, { data: data, time: Date.now() });
     
     renderPOIs(map, data);
-    console.log(`✅ Loaded ${data.elements.length} POIs`);
+    // فقط عند وجود نتائج
+if (data.elements.length > 0) {
+  console.log(`✅ Loaded ${data.elements.length} POIs`);
+}
   } catch (err) {
     console.warn("POI load error:", err.message);
   } finally {
