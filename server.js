@@ -30,8 +30,110 @@ const POI_CACHE_TTL = 30 * 60 * 1000; // 30 دقيقة
 const POI_CACHE_MAX_SIZE = 500;
 
 // ═══════════════════════════════════════════════════════════
-// 🗺️ Overpass API Proxy (POI)
+// 🔐 Admin Routes
 // ═══════════════════════════════════════════════════════════
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin2026";
+
+function checkAdmin(req, res, next) {
+  const password = req.headers["x-admin-password"] || req.query.password;
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "غير مصرح" });
+  }
+  next();
+}
+
+// ═══ إحصائيات ═══
+app.get("/api/admin/stats", checkAdmin, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const customers = await User.countDocuments({ role: "customer" });
+    const drivers = await User.countDocuments({ role: "driver" });
+    const totalRides = await Ride.countDocuments();
+    const activeRides = await Ride.countDocuments({ status: "accepted" });
+    const completedRides = await Ride.countDocuments({ status: "completed" });
+    
+    // السائقين المتصلين حالياً
+    const onlineDriversCount = onlineDrivers.size;
+    
+    res.json({
+      totalUsers: totalUsers,
+      customers: customers,
+      drivers: drivers,
+      totalRides: totalRides,
+      activeRides: activeRides,
+      completedRides: completedRides,
+      onlineDrivers: onlineDriversCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ قائمة المستخدمين ═══
+app.get("/api/admin/users", checkAdmin, async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select("-password")
+      .sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ حذف مستخدم ═══
+app.delete("/api/admin/users/:id", checkAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // احذف المستخدم
+    await User.findByIdAndDelete(userId);
+    
+    // احذف رحلاته
+    await Ride.deleteMany({ customer: userId });
+    await Ride.deleteMany({ driver: userId });
+    
+    console.log(`🗑️ حذف مستخدم: ${userId}`);
+    
+    res.json({ success: true, message: "تم حذف المستخدم" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ قائمة السائقين المتصلين ═══
+app.get("/api/admin/online-drivers", checkAdmin, async (req, res) => {
+  try {
+    const list = [];
+    for (const [driverId, info] of onlineDrivers.entries()) {
+      list.push({
+        id: driverId,
+        name: info.name,
+        carModel: info.carModel,
+        carPlate: info.carPlate,
+        lat: info.lat,
+        lng: info.lng,
+        busy: info.busy,
+        lastUpdate: info.lastUpdate
+      });
+    }
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ حذف كل البيانات (للاختبار) ═══
+app.delete("/api/admin/reset", checkAdmin, async (req, res) => {
+  try {
+    await User.deleteMany({});
+    await Ride.deleteMany({});
+    console.log("🗑️ تم مسح كل البيانات");
+    res.json({ success: true, message: "تم مسح كل البيانات" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ═══════════════════════════════════════════════════════════
 // 🗺️ Geoapify Places API Proxy
 // ═══════════════════════════════════════════════════════════
