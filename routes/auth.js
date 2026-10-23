@@ -7,9 +7,9 @@ const BlockedDevice = require("../models/BlockedDevice");
 // ═══ التسجيل ═══
 router.post("/register", async (req, res) => {
   try {
-    // ⚠️ تحقق من الحظر
-    const deviceId = req.body.deviceId;
+    const { name, phone, password, role, carModel, carPlate, deviceId } = req.body;
     
+    // ⚠️ تحقق من الحظر
     if (deviceId) {
       const blocked = await BlockedDevice.findOne({ deviceId });
       if (blocked) {
@@ -20,10 +20,14 @@ router.post("/register", async (req, res) => {
       }
     }
     
-    // ⚠️ تحقق من رقم الهاتف المحظور (احتياطي)
-    const { phone } = req.body;
+    // ⚠️ تحقق من رقم الهاتف
     if (phone) {
-      const blockedPhone = await BlockedDevice.findOne({ phone });
+      const blockedPhone = await BlockedDevice.findOne({ 
+        $or: [
+          { phone: phone },
+          { deviceId: "phone_" + phone }
+        ]
+      });
       if (blockedPhone) {
         return res.status(403).json({ 
           error: "🚫 هذا الرقم محظور من استخدام التطبيق",
@@ -31,7 +35,6 @@ router.post("/register", async (req, res) => {
         });
       }
     }
-    const { name, phone, password, role, carModel, carPlate } = req.body;
     
     // تحقق من البيانات
     if (!name || !phone || !password || !role) {
@@ -54,15 +57,15 @@ router.post("/register", async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     
     // إنشاء المستخدم
-   const user = await User.create({ 
-  name, 
-  phone, 
-  password: hash, 
-  role, 
-  carModel: carModel || "", 
-  carPlate: carPlate || "",
-  deviceId: req.body.deviceId || ""    // ⚠️ جديد
-});
+     const user = await User.create({ 
+      name, 
+      phone, 
+      password: hash, 
+      role, 
+      carModel: carModel || "", 
+      carPlate: carPlate || "",
+      deviceId: deviceId || ""
+    });
     
     console.log(`✅ مستخدم جديد: ${name} (${phone}) — ${role}`);
     

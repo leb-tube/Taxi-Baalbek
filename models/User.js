@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   role:      { type: String, enum: ["customer", "driver"], required: true },
   carModel:  String,
   carPlate:  String,
+ deviceId:  { type: String, index: true },
   isOnline:  { type: Boolean, default: false },
   location:  { lat: Number, lng: Number }
 }, { timestamps: true });

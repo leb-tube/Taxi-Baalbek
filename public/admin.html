@@ -259,6 +259,7 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
   <!-- التبويبات -->
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="showTab('users')">👥 المستخدمين</button>
+    <button class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
     <button class="admin-tab" onclick="showTab('map')">🗺️ خريطة السائقين</button>
     <button class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
   </div>
@@ -460,7 +461,7 @@ function renderUsers() {
         <td>${u.carPlate || "-"}</td>
         <td>${date}</td>
         <td>
-          <button class="delete-btn" onclick="deleteUser('${u._id}', '${u.name}', '${u.deviceId || ''}', '${u.phone}')">🗑️ حذف وحظر</button>
+       <button class="delete-btn" onclick="deleteUser('${u._id}', '${u.name}', '${u.deviceId || ''}', '${u.phone}')">🗑️ حذف وحظر</button>
         </td>
       </tr>
     `;
@@ -535,7 +536,9 @@ async function deleteUser(userId, userName, deviceId, phone) {
 async function refreshAll() {
   await refreshStats();
   await refreshUsers();
-  await refreshBlockedDevices();
+  if (typeof refreshBlockedDevices === "function") {
+    await refreshBlockedDevices();
+  }
 }
 
 // ═══ التبويبات ═══
@@ -547,26 +550,21 @@ function showTab(tab) {
   document.getElementById("tab-map").classList.add("hidden");
   document.getElementById("tab-blocked").classList.add("hidden");
   
+  if (mapRefreshInterval) {
+    clearInterval(mapRefreshInterval);
+    mapRefreshInterval = null;
+  }
+  
   if (tab === "users") {
     document.getElementById("tab-users").classList.remove("hidden");
-    if (mapRefreshInterval) {
-      clearInterval(mapRefreshInterval);
-      mapRefreshInterval = null;
-    }
   } else if (tab === "map") {
     document.getElementById("tab-map").classList.remove("hidden");
     initDriversMap();
     loadDriversOnMap();
-    
-    if (mapRefreshInterval) clearInterval(mapRefreshInterval);
     mapRefreshInterval = setInterval(loadDriversOnMap, 5000);
   } else if (tab === "blocked") {
     document.getElementById("tab-blocked").classList.remove("hidden");
     refreshBlockedDevices();
-    if (mapRefreshInterval) {
-      clearInterval(mapRefreshInterval);
-      mapRefreshInterval = null;
-    }
   }
 }
 
