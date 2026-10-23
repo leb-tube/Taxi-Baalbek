@@ -932,29 +932,39 @@ window.completeRide = () => {
 window.addEventListener("DOMContentLoaded", function() {
   console.log("🔄 DOM ready, attaching form handlers...");
   
+  // ═══ تسجيل الدخول ═══
   var loginForm = document.getElementById("login-form");
   if (loginForm) {
     loginForm.addEventListener("submit", async function(e) {
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       var phone = document.getElementById("login-phone").value.trim();
       var password = document.getElementById("login-password").value;
       var errEl = document.getElementById("login-error");
       errEl.textContent = "";
       
       try {
-        var res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone, password: password }) });
+        var res = await fetch("/api/auth/login", { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify({ phone: phone, password: password }) 
+        });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);
         routeByRole();
-      } catch (err) { errEl.textContent = "خطأ في الاتصال"; }
+      } catch (err) { 
+        errEl.textContent = "خطأ في الاتصال"; 
+      }
     });
   }
   
+  // ═══ التسجيل ═══
   var registerForm = document.getElementById("register-form");
   if (registerForm) {
     registerForm.addEventListener("submit", async function(e) {
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       var role = document.querySelector("input[name=role]:checked").value;
       var name = document.getElementById("reg-name").value.trim();
       var phone = document.getElementById("reg-phone").value.trim();
@@ -965,32 +975,48 @@ window.addEventListener("DOMContentLoaded", function() {
       errEl.textContent = "";
       
       try {
-      // ⚠️ تحقق من الحظر
-      try {
-        var checkRes = await fetch("/api/check-block", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deviceId: deviceFingerprint, phone: phone })
-        });
-        var checkData = await checkRes.json();
-        if (checkData.blocked) {
-          errEl.textContent = "🚫 " + checkData.reason;
-          return;
+        // تحقق من الحظر
+        try {
+          var checkRes = await fetch("/api/check-block", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId: deviceFingerprint, phone: phone })
+          });
+          var checkData = await checkRes.json();
+          if (checkData.blocked) {
+            errEl.textContent = "🚫 " + checkData.reason;
+            return;
+          }
+        } catch (e) {
+          console.warn("Block check failed:", e);
         }
-      } catch (e) {
-        console.warn("Block check failed:", e);
-      }
-      
-      var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate, deviceId: deviceFingerprint }) 
+        
+        // سجّل المستخدم
+        var res = await fetch("/api/auth/register", { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify({ 
+            name: name, 
+            phone: phone, 
+            password: password, 
+            role: role, 
+            carModel: carModel, 
+            carPlate: carPlate, 
+            deviceId: deviceFingerprint 
+          }) 
+        });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);
         routeByRole();
-      } catch (err) { errEl.textContent = "خطأ في الاتصال"; }
+      } catch (err) { 
+        errEl.textContent = "خطأ في الاتصال"; 
+      }
     });
   }
   
   routeByRole();
+});                         
 
 </script>
 </body>
