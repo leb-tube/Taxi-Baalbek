@@ -39,7 +39,7 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
 .users-table .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
 .badge.customer { background: #d1ecf1; color: #0c5460; }
 .badge.driver { background: #d4edda; color: #155724; }
-.delete-btn { background: #dc3545; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.delete-btn { background: #dc3545; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-right: 5px; }
 .block-btn { background: #e67e22; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-right: 5px; }
 .hidden { display: none !important; }
 .info-bar { background: #fffbea; border: 2px solid #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
@@ -176,25 +176,31 @@ function renderUsers() {
   });
   document.getElementById("shown-count").textContent = filtered.length;
   const tbody = document.getElementById("users-list");
+  
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">لا يوجد مستخدمون</td></tr>';
     return;
   }
+  
   tbody.innerHTML = filtered.map(u => {
     const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString("ar-LB") : "-";
     const roleBadge = u.role === "customer" ? '<span class="badge customer">🧍 زبون</span>' : '<span class="badge driver">🚗 سائق</span>';
-    return '<tr>' +
-      '<td><b>' + (u.name || "-") + '</b></td>' +
-      '<td>' + (u.phone || "-") + '</td>' +
-      '<td>' + roleBadge + '</td>' +
-      '<td>' + (u.carModel || "-") + '</td>' +
-      '<td>' + (u.carPlate || "-") + '</td>' +
-      '<td>' + date + '</td>' +
-      '<td>' +
-        '<button class="block-btn" onclick="blockOnly('' + (u.deviceId || '') + '', '' + (u.phone || '') + '')">🚫 حظر فقط</button>' +
-        '<button class="delete-btn" onclick="deleteUser('' + u._id + '', '' + (u.name || '-') + '', '' + (u.deviceId || '') + '', '' + (u.phone || '') + '')">🗑️ حذف وحظر</button>' +
-      '</td>' +
-    '</tr>';
+    const safeName = (u.name || '-').replace(/'/g, "\\'");
+    
+    return `
+      <tr>
+        <td><b>${u.name || "-"}</b></td>
+        <td>${u.phone || "-"}</td>
+        <td>${roleBadge}</td>
+        <td>${u.carModel || "-"}</td>
+        <td>${u.carPlate || "-"}</td>
+        <td>${date}</td>
+        <td>
+          <button class="block-btn" onclick="blockOnly('${u.deviceId || ''}', '${u.phone || ''}')">🚫 حظر فقط</button>
+          <button class="delete-btn" onclick="deleteUser('${u._id}', '${safeName}', '${u.deviceId || ''}', '${u.phone || ''}')">🗑️ حذف وحظر</button>
+        </td>
+      </tr>
+    `;
   }).join("");
 }
 
@@ -202,7 +208,7 @@ function filterUsers() { renderUsers(); }
 
 async function blockOnly(deviceId, phone) {
   if (!deviceId && !phone) { alert("❌ لا تتوفر بيانات كافية للحظر"); return; }
-  const reason = prompt("أدخل سبب حظر هذا المستخدم دون حذفه:");
+  const reason = prompt("أدخل سبب حظر هذا المستخدم (دون حذف حسابه):");
   if (reason === null) return;
   try {
     if (deviceId) {
@@ -218,7 +224,7 @@ async function blockOnly(deviceId, phone) {
 }
 
 async function deleteUser(userId, userName, deviceId, phone) {
-  if (!confirm('هل تريد حذف "' + userName + '"؟\n\n⚠️ سيتم:\n- حظر الجهاز\n- حظر رقم الهاتف\n- حذف الحساب\n- حذف كل رحلاته')) return;
+  if (!confirm(`هل تريد حذف "${userName}"؟\n\n⚠️ سيتم:\n- حظر الجهاز\n- حظر رقم الهاتف\n- حذف الحساب\n- حذف كل رحلاته`)) return;
   
   try {
     if (deviceId) {
@@ -240,7 +246,7 @@ async function deleteUser(userId, userName, deviceId, phone) {
       headers: { "x-admin-password": ADMIN_PASSWORD }
     });
     if (!res.ok) { alert("❌ فشل الحذف"); return; }
-    alert("✅ تم حذف " + userName + " وحظر جهازه");
+    alert(`✅ تم حذف ${userName} وحظر جهازه`);
     await refreshAll();
   } catch (err) { alert("❌ خطأ"); }
 }
@@ -251,14 +257,27 @@ async function refreshBlockedDevices() {
     if (!res.ok) return;
     const blocked = await res.json();
     const tbody = document.getElementById("blocked-list");
+    
     if (blocked.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">لا يوجد محظورون</td></tr>';
       return;
     }
+    
     tbody.innerHTML = blocked.map(b => {
       const date = b.blockedAt ? new Date(b.blockedAt).toLocaleDateString("ar-LB") : "-";
       const short = b.deviceId.startsWith("phone_") ? "📱 " + b.deviceId.replace("phone_", "") : b.deviceId.substring(0, 16) + "...";
-      return '<tr><td><code style="font-size:11px">' + short + '</code></td><td>' + (b.phone || "-") + '</td><td>' + (b.reason || "-") + '</td><td>' + date + '</td><td><button class="delete-btn" style="background:#28a745" onclick="unblockDevice('' + b.deviceId + '')">✅ فك الحظر</button></td></tr>';
+      
+      return `
+        <tr>
+          <td><code style="font-size:11px">${short}</code></td>
+          <td>${b.phone || "-"}</td>
+          <td>${b.reason || "-"}</td>
+          <td>${date}</td>
+          <td>
+            <button class="delete-btn" style="background:#28a745" onclick="unblockDevice('${b.deviceId}')">✅ فك الحظر</button>
+          </td>
+        </tr>
+      `;
     }).join("");
   } catch (err) { console.error(err); }
 }
