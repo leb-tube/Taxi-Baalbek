@@ -2,10 +2,35 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const BlockedDevice = require("../models/BlockedDevice");
 
 // ═══ التسجيل ═══
 router.post("/register", async (req, res) => {
   try {
+    // ⚠️ تحقق من الحظر
+    const deviceId = req.body.deviceId;
+    
+    if (deviceId) {
+      const blocked = await BlockedDevice.findOne({ deviceId });
+      if (blocked) {
+        return res.status(403).json({ 
+          error: "🚫 هذا الجهاز محظور من استخدام التطبيق",
+          blocked: true 
+        });
+      }
+    }
+    
+    // ⚠️ تحقق من رقم الهاتف المحظور (احتياطي)
+    const { phone } = req.body;
+    if (phone) {
+      const blockedPhone = await BlockedDevice.findOne({ phone });
+      if (blockedPhone) {
+        return res.status(403).json({ 
+          error: "🚫 هذا الرقم محظور من استخدام التطبيق",
+          blocked: true 
+        });
+      }
+    }
     const { name, phone, password, role, carModel, carPlate } = req.body;
     
     // تحقق من البيانات
@@ -29,14 +54,15 @@ router.post("/register", async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     
     // إنشاء المستخدم
-    const user = await User.create({ 
-      name, 
-      phone, 
-      password: hash, 
-      role, 
-      carModel: carModel || "", 
-      carPlate: carPlate || "" 
-    });
+   const user = await User.create({ 
+  name, 
+  phone, 
+  password: hash, 
+  role, 
+  carModel: carModel || "", 
+  carPlate: carPlate || "",
+  deviceId: req.body.deviceId || ""    // ⚠️ جديد
+});
     
     console.log(`✅ مستخدم جديد: ${name} (${phone}) — ${role}`);
     

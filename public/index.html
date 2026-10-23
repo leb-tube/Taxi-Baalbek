@@ -218,6 +218,7 @@ input:focus { outline: none; border-color: #ffc107; }
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/fingerprint.js"></script>
 <script>
 const LEBANON_CENTER = [33.8547, 35.8623];
 const LEBANON_ZOOM = 9;
@@ -227,7 +228,15 @@ const API = {
   token: localStorage.getItem("token"), 
   user: JSON.parse(localStorage.getItem("user") || "null") 
 };
-
+// ⚠️ احصل على بصمة الجهاز
+let deviceFingerprint = null;
+getDeviceFingerprint().then(fp => {
+  deviceFingerprint = fp;
+  console.log("🔍 Device ID:", fp.substring(0, 16) + "...");
+}).catch(err => {
+  console.error("Fingerprint error:", err);
+  deviceFingerprint = "unknown_" + Date.now();
+});
 let socket = null;
 let driverSocket = null;
 
@@ -953,7 +962,7 @@ window.addEventListener("DOMContentLoaded", function() {
       errEl.textContent = "";
       
       try {
-        var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate }) });
+        var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate , deviceId: deviceFingerprint }) });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);
@@ -963,6 +972,22 @@ window.addEventListener("DOMContentLoaded", function() {
   }
   
   routeByRole();
+// ⚠️ تحقق إذا الجهاز محظور
+try {
+  var checkRes = await fetch("/api/check-block", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId: deviceFingerprint, phone: phone })
+  });
+  var checkData = await checkRes.json();
+  
+  if (checkData.blocked) {
+    errEl.textContent = checkData.reason;
+    return;
+  }
+} catch (e) {
+  console.warn("Block check failed:", e);
+}
 });
 </script>
 </body>

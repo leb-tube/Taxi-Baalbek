@@ -41,7 +41,82 @@ function checkAdmin(req, res, next) {
   }
   next();
 }
+// ═══════════════════════════════════════
+// 🚫 إدارة الحظر
+// ═══════════════════════════════════════
+const BlockedDevice = require("./models/BlockedDevice");
 
+// ═══ قائمة المحظورين ═══
+app.get("/api/admin/blocked-devices", checkAdmin, async (req, res) => {
+  try {
+    const blocked = await BlockedDevice.find({}).sort({ blockedAt: -1 });
+    res.json(blocked);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ حظر جهاز ═══
+app.post("/api/admin/block-device", checkAdmin, async (req, res) => {
+  try {
+    const { deviceId, phone, reason, blockedBy } = req.body;
+    
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId مطلوب" });
+    }
+    
+    // تحقق إذا محظور سابقاً
+    const exists = await BlockedDevice.findOne({ deviceId });
+    if (exists) {
+      return res.json({ success: true, message: "محظور بالفعل", data: exists });
+    }
+    
+    const blocked = await BlockedDevice.create({
+      deviceId,
+      phone: phone || "",
+      reason: reason || "حظر إداري",
+      blockedBy: blockedBy || "admin"
+    });
+    
+    console.log(`🚫 حظر جهاز: ${deviceId.substring(0, 16)}... — ${reason}`);
+    
+    res.json({ success: true, message: "تم الحظر", data: blocked });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ فك الحظر ═══
+app.delete("/api/admin/block-device/:deviceId", checkAdmin, async (req, res) => {
+  try {
+    await BlockedDevice.deleteOne({ deviceId: req.params.deviceId });
+    console.log(`✅ فك حظر جهاز: ${req.params.deviceId.substring(0, 16)}...`);
+    res.json({ success: true, message: "تم فك الحظر" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ التحقق من الحظر (يستخدمه العميل عند التسجيل) ═══
+app.post("/api/check-block", async (req, res) => {
+  try {
+    const { deviceId, phone } = req.body;
+    
+    if (deviceId) {
+      const blocked = await BlockedDevice.findOne({ deviceId });
+      if (blocked) {
+        return res.json({ 
+          blocked: true, 
+          reason: blocked.reason || "هذا الجهاز محظور" 
+        });
+      }
+    }
+    
+    res.json({ blocked: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ═══ إحصائيات ═══
 app.get("/api/admin/stats", checkAdmin, async (req, res) => {
   try {
