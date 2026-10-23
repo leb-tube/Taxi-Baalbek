@@ -55,89 +55,20 @@ input:focus { outline: none; border-color: #ffc107; }
 .info-card h4 { margin-bottom: 10px; color: #1b5e20; }
 .info-card p { margin: 5px 0; font-size: 14px; }
 .notification { position: fixed; top: 20px; right: 20px; background: #333; color: #fff; padding: 15px 25px; border-radius: 10px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.3); max-width: 350px; }
-.driver-badge { display: inline-block; background: #28a745; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-.driver-badge.busy { background: #dc3545; }
 .searching { text-align: center; padding: 20px; }
 .searching .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #ffc107; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* ═══ مربع البحث ═══ */
-.search-box {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  left: 10px;
-  z-index: 1001;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.3);
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
-  display: none;
-}
+.search-box { position: absolute; top: 10px; right: 10px; left: 10px; z-index: 1001; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.3); max-width: 400px; margin-left: auto; margin-right: auto; display: none; }
 .search-box.active { display: block; }
-.search-box input {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: Tahoma, sans-serif;
-  margin: 0;
-}
-.search-box input:focus { outline: 2px solid #ffc107; }
-.search-results {
-  max-height: 250px;
-  overflow-y: auto;
-  border-top: 1px solid #eee;
-}
-.search-result-item {
-  padding: 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
-  transition: .2s;
-}
+.search-box input { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-family: Tahoma; margin: 0; }
+.search-results { max-height: 250px; overflow-y: auto; border-top: 1px solid #eee; }
+.search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
 .search-result-item:hover { background: #fffbea; }
 .search-result-item .title { font-weight: bold; color: #111; margin-bottom: 3px; }
 .search-result-item .subtitle { color: #666; font-size: 12px; }
-.search-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1001;
-  background: #ffc107;
-  border: 2px solid #111;
-  border-radius: 8px;
-  padding: 10px 15px;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0,0,0,.3);
-}
-.search-toggle:hover {
-  background: #ffb300;
-}
+.search-toggle { position: absolute; top: 10px; right: 10px; z-index: 1001; background: #ffc107; border: 2px solid #111; border-radius: 8px; padding: 10px 15px; cursor: pointer; font-size: 18px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .map-wrapper { position: relative; }
-/* ═══ حل مشكلة RTL/LTR للنصوص المختلطة ═══ */
-.leaflet-popup-content,
-.search-result-item .title,
-.search-result-item .subtitle,
-.info-card p,
-.ride-card p {
-  unicode-bidi: plaintext;
-}
-
-.leaflet-popup-content b,
-.search-result-item .title,
-.search-result-item .subtitle {
-  unicode-bidi: plaintext;
-  direction: auto;
-}
-* {
-  unicode-bidi: plaintext;
-}
+* { unicode-bidi: plaintext; }
 </style>
 </head>
 <body>
@@ -190,7 +121,7 @@ input:focus { outline: none; border-color: #ffc107; }
     <div id="customer-map"></div>
     <button class="search-toggle" id="search-toggle" title="بحث بالعنوان">🔍</button>
     <div class="search-box" id="search-box">
-      <input type="text" id="search-input" placeholder="اكتب اسم مكان... (مطعم، فندق، شارع)">
+      <input type="text" id="search-input" placeholder="اكتب اسم مكان...">
       <div class="search-results" id="search-results"></div>
     </div>
   </div>
@@ -217,7 +148,8 @@ input:focus { outline: none; border-color: #ffc107; }
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="/socket.io/socket.io.js"><script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
 // ═══════════════════════════════════════
 // 🔍 Device Fingerprint (inline)
 // ═══════════════════════════════════════
@@ -260,7 +192,6 @@ async function getDeviceFingerprint() {
   return hash;
 }
 
-// ═══ Device Fingerprint ═══
 let deviceFingerprint = null;
 getDeviceFingerprint().then(fp => {
   deviceFingerprint = fp;
@@ -269,21 +200,11 @@ getDeviceFingerprint().then(fp => {
   console.error("Fingerprint error:", err);
   deviceFingerprint = "unknown_" + Date.now();
 });
-</script></script>
-<script src="/fingerprint.js?v=2"></script>
-<script>
+
+// ═══════════════════════════════════════
+// ⚙️ المتغيرات الأساسية
+// ═══════════════════════════════════════
 const LEBANON_CENTER = [33.8547, 35.8623];
-// ⚠️ Device Fingerprint
-let deviceFingerprint = null;
-if (typeof getDeviceFingerprint === "function") {
-  getDeviceFingerprint().then(fp => {
-    deviceFingerprint = fp;
-    console.log("🔍 Device ID:", fp.substring(0, 20) + "...");
-  }).catch(err => {
-    console.error("Fingerprint error:", err);
-    deviceFingerprint = "unknown_" + Date.now();
-  });
-}
 const LEBANON_ZOOM = 9;
 const LOCATION_UPDATE_INTERVAL = 2000;
 
@@ -306,56 +227,42 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active"); 
 }
 
+function notify(msg, duration = 3500) {
+  const el = document.getElementById("notification");
+  if (el) {
+    el.textContent = msg;
+    el.style.display = "block";
+    setTimeout(() => el.style.display = "none", duration);
+  }
+}
+
 // ═══════════════════════════════════════
-// 🔔 إشعار صوتي (بدون ملفات)
+// 🔔 إشعار صوتي
 // ═══════════════════════════════════════
 function playBeep(type = "default") {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
     const sounds = {
-      new_ride: [
-        { freq: 800, duration: 0.15, delay: 0 },
-        { freq: 1000, duration: 0.15, delay: 0.2 },
-        { freq: 800, duration: 0.15, delay: 0.4 },
-        { freq: 1000, duration: 0.3, delay: 0.6 }
-      ],
-      accepted: [
-        { freq: 523, duration: 0.15, delay: 0 },
-        { freq: 659, duration: 0.15, delay: 0.15 },
-        { freq: 784, duration: 0.3, delay: 0.3 }
-      ],
-      arrived: [
-        { freq: 660, duration: 0.2, delay: 0 },
-        { freq: 880, duration: 0.2, delay: 0.25 },
-        { freq: 660, duration: 0.2, delay: 0.5 },
-        { freq: 880, duration: 0.4, delay: 0.75 }
-      ]
+      new_ride: [{ freq: 800, duration: 0.15, delay: 0 }, { freq: 1000, duration: 0.15, delay: 0.2 }, { freq: 800, duration: 0.15, delay: 0.4 }, { freq: 1000, duration: 0.3, delay: 0.6 }],
+      accepted: [{ freq: 523, duration: 0.15, delay: 0 }, { freq: 659, duration: 0.15, delay: 0.15 }, { freq: 784, duration: 0.3, delay: 0.3 }],
+      arrived: [{ freq: 660, duration: 0.2, delay: 0 }, { freq: 880, duration: 0.2, delay: 0.25 }, { freq: 660, duration: 0.2, delay: 0.5 }, { freq: 880, duration: 0.4, delay: 0.75 }]
     };
-    
     const notes = sounds[type] || sounds.accepted;
-    
     notes.forEach(note => {
       setTimeout(() => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
         osc.frequency.value = note.freq;
         osc.type = "sine";
-        
         gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + note.duration);
-        
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + note.duration);
       }, note.delay * 1000);
     });
-  } catch (err) {
-    console.error("Sound error:", err);
-  }
+  } catch (err) { console.error("Sound error:", err); }
 }
 
 document.addEventListener("click", () => {
@@ -369,9 +276,6 @@ document.addEventListener("click", () => {
   }
 }, { once: true });
 
-// ═══════════════════════════════════════
-// ⚙️ دالة التوجيه وحالة الجلسة البرمجية المصححة
-// ═══════════════════════════════════════
 function routeByRole() {
   if (!API.token || !API.user) return showScreen("auth-screen");
   if (API.user.role === "driver") {
@@ -385,18 +289,6 @@ function routeByRole() {
   }
 }
 
-function notify(msg, duration = 3500) {
-  const el = document.getElementById("notification");
-  if (el) {
-    el.textContent = msg;
-    el.style.display = "block";
-    setTimeout(() => el.style.display = "none", duration);
-  }
-}
-
-// ═══════════════════════════════════════
-// 📑 التبويبات ونماذج الإدخال
-// ═══════════════════════════════════════
 document.querySelectorAll(".tab").forEach(tab => {
   tab.onclick = () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -413,57 +305,33 @@ document.querySelectorAll("input[name=role]").forEach(r => {
 });
 
 // ═══════════════════════════════════════
-// 🗺️ دالة إضافة الطبقات لخريطة ليفلت
+// 🗺️ الخرائط
 // ═══════════════════════════════════════
 function addMapLayers(map) {
-  const streetsLayer = L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    { attribution: "© OpenStreetMap", maxZoom: 19 }
-  );
-
-  const satelliteLayer = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }
-  );
-
+  const streetsLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 });
+  const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 });
   const hybridLayer = L.layerGroup([
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17 }),
     L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 19, opacity: 0.9 }),
     L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 17, opacity: 0.9 }),
-    L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png", { attribution: "© Stadia Maps, © Stamen", maxZoom: 20, subdomains: "abcd", opacity: 0.85 })
+    L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png", { attribution: "© Stadia Maps", maxZoom: 20, subdomains: "abcd", opacity: 0.85 })
   ]);
-
   streetsLayer.addTo(map);
-
-  L.control.layers({
-    "🗺️ شوارع": streetsLayer,
-    "🛰️ قمر صناعي": satelliteLayer,
-    "🌍 هجين": hybridLayer
-  }, null, { position: "topright", collapsed: false }).addTo(map);
-
-  setTimeout(function() {
-    const layersControl = document.querySelector('.leaflet-control-layers');
-    if (layersControl) layersControl.style.marginTop = '70px';
-  }, 100);
+  L.control.layers({ "🗺️ شوارع": streetsLayer, "🛰️ قمر صناعي": satelliteLayer, "🌍 هجين": hybridLayer }, null, { position: "topright", collapsed: false }).addTo(map);
+  setTimeout(() => { const c = document.querySelector('.leaflet-control-layers'); if (c) c.style.marginTop = '70px'; }, 100);
 }
 
-// ═══════════════════════════════════════
-// 🔍 دالة البحث بالعنوان
-// ═══════════════════════════════════════
 async function searchAddress(query) {
   if (!query || query.length < 3) return [];
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
-    console.error("Search error:", err);
-    return [];
-  }
+  } catch (err) { return []; }
 }
 
 let poiDebounceTimeout = null;
-let poiLoading = false;                     
+let poiLoading = false;
 const poiClientCache = new Map();
 const POI_CLIENT_TTL = 10 * 60 * 1000;
 
@@ -482,113 +350,75 @@ async function loadPOIs(map) {
   const west = bounds.getWest().toFixed(4);
   const north = bounds.getNorth().toFixed(4);
   const east = bounds.getEast().toFixed(4);
-  
   const cacheKey = `${zoom}_${south}_${west}_${north}_${east}`;
+  
   const cached = poiClientCache.get(cacheKey);
-  if (cached && Date.now() - cached.time < POI_CLIENT_TTL) {
-    renderPOIs(map, cached.data);
-    return;
-  }
+  if (cached && Date.now() - cached.time < POI_CLIENT_TTL) { renderPOIs(map, cached.data); return; }
   
   poiLoading = true;
   try {
-    const url = `/api/pois?south=${south}&west=${west}&north=${north}&east=${east}&zoom=${zoom}`;
-    const res = await fetch(url);
+    const res = await fetch(`/api/pois?south=${south}&west=${west}&north=${north}&east=${east}&zoom=${zoom}`);
     if (!res.ok) return;
     const data = await res.json();
     poiClientCache.set(cacheKey, { data: data, time: Date.now() });
     renderPOIs(map, data);
-  } catch (err) {
-    console.warn("POI load error:", err.message);
-  } finally {
-    poiLoading = false;
-  }
+  } catch (err) { console.warn("POI error:", err.message); } 
+  finally { poiLoading = false; }
 }
 
 function renderPOIs(map, data) {
   if (!data.elements) return;
   if (window.poiLayer) map.removeLayer(window.poiLayer);
   window.poiLayer = L.layerGroup().addTo(map);
-  
-  const icons = {
-    restaurant: "🍽️", cafe: "☕", fast_food: "🍔", hospital: "🏥",
-    pharmacy: "💊", fuel: "⛽", bank: "🏦", police: "🚔", hotel: "🏨"
-  };
-  
+  const icons = { restaurant: "🍽️", cafe: "☕", fast_food: "🍔", hospital: "🏥", pharmacy: "💊", fuel: "⛽", bank: "🏦", police: "🚔", hotel: "🏨" };
   data.elements.forEach(el => {
     if (!el.lat || !el.lon) return;
     const type = el.tags.amenity || el.tags.tourism;
     const name = el.tags.name || el.tags["name:ar"] || el.tags["name:en"];
     if (!name) return;
-    
     const icon = icons[type] || "📍";
-    const marker = L.marker([el.lat, el.lon], {
-      icon: L.divIcon({
-        html: '<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.7);background:rgba(255,255,255,.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">' + icon + '</div>',
-        className: "", iconSize: [32, 32], iconAnchor: [16, 16]
-      })
-    });
-    marker.bindPopup('<b>' + icon + ' <span dir="auto" style="unicode-bidi: plaintext">' + name + '</span></b>');
-    window.poiLayer.addLayer(marker);
+    L.marker([el.lat, el.lon], { icon: L.divIcon({ html: '<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.7);background:rgba(255,255,255,.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff">' + icon + '</div>', className: "", iconSize: [32, 32], iconAnchor: [16, 16] }) }).addTo(window.poiLayer).bindPopup('<b>' + icon + ' ' + name + '</b>');
   });
 }
 
 // ═══════════════════════════════════════
-// 🧍 تطبيق الزبون (المصحح)
+// 🧍 تطبيق الزبون
 // ═══════════════════════════════════════
 let customerMap, customerMarkers = [], customerPoints = [];
 let driversMarkers = {};
 let currentRideId = null;
 let customerGPSMarker = null;
 let customerGPSLat = null, customerGPSLng = null;
-let activeDriverId = null;               
- 
+let activeDriverId = null;
+
 function initCustomerApp() {
   if (customerMap) return;
-  if (typeof io !== "undefined") {
-    socket = io();
-  } else {
-    console.error("Socket.io library not loaded.");
-    return;
-  }
+  if (typeof io === "undefined") return;
+  socket = io();
   
   let driverLocationMarker = null;
   customerMap = L.map("customer-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(customerMap);
-  
   customerMap.on("moveend", () => scheduleLoadPOIs(customerMap));
   customerMap.on("zoomend", () => scheduleLoadPOIs(customerMap));
   setTimeout(() => loadPOIs(customerMap), 2000);
 
   if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(
-      (pos) => {
-        customerGPSLat = pos.coords.latitude;
-        customerGPSLng = pos.coords.longitude;
-        if (customerGPSMarker) {
-          customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
-        } else {
-          const myIcon = L.divIcon({
-            html: '<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>',
-            className: "", iconSize: [36, 36], iconAnchor: [18, 18]
-          });
-          customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: myIcon }).addTo(customerMap).bindPopup("<b>📍 موقعك الحالي</b>").openPopup();
-          customerMap.setView([customerGPSLat, customerGPSLng], 15);
-        }
-        if (customerPoints.length === 0 && !currentRideId) {
-          addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
-          notify("✅ تم تحديد موقعك تلقائياً كنقطة انطلاق");
-        }
-      },
-      (err) => {
-        document.getElementById("customer-hint").textContent = "⚠️ تعذّر تحديد موقعك — انقر على الخريطة لتحديد نقطة الانطلاق";
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    navigator.geolocation.watchPosition((pos) => {
+      customerGPSLat = pos.coords.latitude;
+      customerGPSLng = pos.coords.longitude;
+      if (customerGPSMarker) customerGPSMarker.setLatLng([customerGPSLat, customerGPSLng]);
+      else {
+        customerGPSMarker = L.marker([customerGPSLat, customerGPSLng], { icon: L.divIcon({ html: '<div style="background:#007bff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff">📍</div>', className: "", iconSize: [36, 36], iconAnchor: [18, 18] }) }).addTo(customerMap).bindPopup("موقعك الحالي").openPopup();
+        customerMap.setView([customerGPSLat, customerGPSLng], 15);
+      }
+      if (customerPoints.length === 0 && !currentRideId) {
+        addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
+      }
+    }, (err) => { document.getElementById("customer-hint").textContent = "⚠️ تعذّر تحديد موقعك"; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
 
   const useMyLocationBtn = document.createElement("button");
-  useMyLocationBtn.id = "use-my-location";
   useMyLocationBtn.className = "btn-secondary";
   useMyLocationBtn.textContent = "📍 استخدام موقعي";
   useMyLocationBtn.style.cssText = "flex:1;background:#007bff;color:#fff;margin-left:5px";
@@ -600,27 +430,22 @@ function initCustomerApp() {
   const searchInput = document.getElementById("search-input");
   const searchResults = document.getElementById("search-results");
   
-  searchToggle.onclick = () => {
-    searchBox.classList.toggle("active");
-    if (searchBox.classList.contains("active")) setTimeout(() => searchInput.focus(), 100);
-  };
+  searchToggle.onclick = () => { searchBox.classList.toggle("active"); if (searchBox.classList.contains("active")) setTimeout(() => searchInput.focus(), 100); };
   
   let searchTimeout;
   searchInput.oninput = (e) => {
     clearTimeout(searchTimeout);
     const q = e.target.value.trim();
     if (q.length < 3) { searchResults.innerHTML = ""; return; }
-    
     searchTimeout = setTimeout(async () => {
-      searchResults.innerHTML = '<div style="padding:12px;text-align:center;color:#666">🔍 جاري البحث...</div>';
+      searchResults.innerHTML = '<div style="padding:12px;text-align:center">🔍 جاري البحث...</div>';
       const results = await searchAddress(q);
-      if (results.length === 0) { searchResults.innerHTML = '<div style="padding:12px;text-align:center;color:#999">لا توجد نتائج</div>'; return; }
-      
+      if (results.length === 0) { searchResults.innerHTML = '<div style="padding:12px;text-align:center">لا توجد نتائج</div>'; return; }
       searchResults.innerHTML = "";
       results.forEach(r => {
         const div = document.createElement("div");
         div.className = "search-result-item";
-        div.innerHTML = '<div class="title" dir="auto">📍 ' + r.name + '</div><div class="subtitle" dir="auto">' + r.fullName.substring(0, 80) + '...</div>';
+        div.innerHTML = '<div class="title">📍 ' + r.name + '</div><div class="subtitle">' + r.fullName.substring(0, 80) + '...</div>';
         div.onclick = () => selectSearchResult(r);
         searchResults.appendChild(div);
       });
@@ -629,35 +454,20 @@ function initCustomerApp() {
 
   socket.on("drivers-list-update", (drivers) => {
     const currentIds = new Set(drivers.map(d => d.id));
-    for (const id in driversMarkers) {
-      if (!currentIds.has(id)) { driversMarkers[id].remove(); delete driversMarkers[id]; }
-    }
+    for (const id in driversMarkers) { if (!currentIds.has(id)) { driversMarkers[id].remove(); delete driversMarkers[id]; } }
     drivers.forEach(driver => {
       const color = driver.busy ? '#dc3545' : '#28a745';
-      const icon = L.divIcon({ 
-        html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">🚗</div>',
-        className: "", iconSize: [40, 40], iconAnchor: [20, 20]
-      });
-      if (driversMarkers[driver.id]) {
-        driversMarkers[driver.id].setLatLng([driver.lat, driver.lng]).setIcon(icon);
-      } else {
-        driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon }).addTo(customerMap).bindPopup('<b>🚗 ' + driver.name + '</b><br>' + driver.carModel + ' — ' + driver.carPlate);
-      }
+      const icon = L.divIcon({ html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff">🚗</div>', className: "", iconSize: [40, 40], iconAnchor: [20, 20] });
+      if (driversMarkers[driver.id]) driversMarkers[driver.id].setLatLng([driver.lat, driver.lng]).setIcon(icon);
+      else driversMarkers[driver.id] = L.marker([driver.lat, driver.lng], { icon }).addTo(customerMap).bindPopup(driver.name + ' — ' + driver.carModel);
     });
   });
 
   socket.on("driver-location-update", ({ driverId, lat, lng }) => {
     if (driversMarkers[driverId]) driversMarkers[driverId].setLatLng([lat, lng]);
     if (activeDriverId === driverId) {
-      if (driverLocationMarker) {
-        driverLocationMarker.setLatLng([lat, lng]);
-      } else {
-        const driverIcon = L.divIcon({
-          html: '<div style="background:#28a745;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;box-shadow:0 0 12px rgba(40,167,69,.8)">🚗</div>',
-          className: "", iconSize: [44, 44], iconAnchor: [22, 22]
-        });
-        driverLocationMarker = L.marker([lat, lng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(customerMap).bindPopup("🚗 سائقك في الطريق");
-      }
+      if (driverLocationMarker) driverLocationMarker.setLatLng([lat, lng]);
+      else driverLocationMarker = L.marker([lat, lng], { icon: L.divIcon({ html: '<div style="background:#28a745;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff">🚗</div>', className: "", iconSize: [44, 44], iconAnchor: [22, 22] }), zIndexOffset: 1000 }).addTo(customerMap).bindPopup("سائقك");
       if (customerGPSLat && customerGPSLng) {
         if (window.connectionLine) customerMap.removeLayer(window.connectionLine);
         window.connectionLine = L.polyline([[lat, lng], [customerGPSLat, customerGPSLng]], { color: "#28a745", weight: 3, dashArray: "5, 5", opacity: 0.6 }).addTo(customerMap);
@@ -665,39 +475,26 @@ function initCustomerApp() {
     }
   });
 
-  socket.on("search-started", ({ rideId, driversOnline }) => {
-    document.getElementById("ride-status").innerHTML = 
-      '<div class="searching"><div class="spinner"></div><p style="margin-top:15px"><b>⏳ جاري البحث عن سائق...</b></p><p style="color:#666;font-size:14px;margin-top:5px">' + driversOnline + ' سائق متصل</p><button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button></div>';
+  socket.on("search-started", ({ driversOnline }) => {
+    document.getElementById("ride-status").innerHTML = '<div class="searching"><div class="spinner"></div><p>⏳ جاري البحث...</p><p>' + driversOnline + ' سائق متصل</p><button class="btn-danger" style="width:100%" onclick="cancelRide()">❌ إلغاء</button></div>';
   });
 
   socket.on("search-restarted", ({ message }) => {
-    document.getElementById("ride-status").innerHTML = 
-      '<div class="searching"><div class="spinner"></div><p style="margin-top:15px"><b>' + message + '</b></p><button class="btn-danger" style="margin-top:15px;width:100%" onclick="cancelRide()">❌ إلغاء الطلب</button></div>';
+    document.getElementById("ride-status").innerHTML = '<div class="searching"><div class="spinner"></div><p>' + message + '</p><button class="btn-danger" style="width:100%" onclick="cancelRide()">❌ إلغاء</button></div>';
     notify(message);
   });
 
-  socket.on("ride-accepted", ({ rideId, driver, etaMin }) => {
+  socket.on("ride-accepted", ({ driver, etaMin }) => {
     activeDriverId = driver._id;
     playBeep("accepted");
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-    document.getElementById("ride-status").innerHTML = 
-      '<div class="info-card"><h4>✅ السائق في الطريق إليك</h4><p><b>⏱️ وقت الوصول:</b> <span style="color:#1b5e20;font-size:20px;font-weight:bold">' + etaMin + ' دقيقة</span></p><p><b>👤 الاسم:</b> ' + driver.name + '</p><p><b>📞 الهاتف:</b> ' + driver.phone + '</p><p><b>🚗 السيارة:</b> ' + driver.carModel + '</p><p><b>🔢 اللوحة:</b> ' + driver.carPlate + '</p><a href="tel:' + driver.phone + '" class="btn-call">📞 اتصال</a><button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRide()">❌ إلغاء الرحلة</button></div>';
+    document.getElementById("ride-status").innerHTML = '<div class="info-card"><h4>✅ السائق في الطريق</h4><p><b>⏱️ الوصول:</b> ' + etaMin + ' دقيقة</p><p><b>👤:</b> ' + driver.name + '</p><p><b>📞:</b> ' + driver.phone + '</p><p><b>🚗:</b> ' + driver.carModel + ' - ' + driver.carPlate + '</p><a href="tel:' + driver.phone + '" class="btn-call">📞 اتصال</a><button class="btn-danger" style="width:100%" onclick="cancelRide()">❌ إلغاء</button></div>';
   });
 
-  socket.on("driver-arrived", ({ rideId, driverId }) => {
+  socket.on("driver-arrived", () => {
     playBeep("arrived");
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-    notify("📍 السائق وصل لموقعك! اخرج إليه الآن.", 8000);
-    const statusEl = document.getElementById("ride-status");
-    if (statusEl) {
-      const existingCard = statusEl.querySelector(".info-card");
-      if (existingCard) {
-        const badge = document.createElement("p");
-        badge.style.cssText = "background:#ff9800;color:#fff;padding:10px;border-radius:8px;text-align:center;font-weight:bold;margin-top:10px";
-        badge.textContent = "📍 السائق وصل لموقعك!";
-        existingCard.appendChild(badge);
-      }
-    }
+    notify("📍 السائق وصل لموقعك!", 8000);
   });
 
   socket.on("ride-cancelled", ({ rideId }) => {
@@ -725,69 +522,53 @@ function initCustomerApp() {
     const ride = await res.json();
     currentRideId = ride._id;
     socket.emit("new-ride", { ...ride, customerSocketId: socket.id });
-  };                       
-}                            
-     
-// ═══════════════════════════════════════
-// 🛣️ حساب الطريق الفعلي (OSRM)
-// ═══════════════════════════════════════
+  };
+}
+
 async function getRoute(fromLat, fromLng, toLat, toLng) {
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`);
     if (!res.ok) throw new Error("OSRM error");
     const data = await res.json();
     if (!data.routes || data.routes.length === 0) return null;
     const route = data.routes[0];
-    const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-    return { coordinates: coordinates, distance: (route.distance / 1000).toFixed(2), duration: Math.round(route.duration / 60) };
-  } catch (err) {
-    console.error("Route error:", err);
-    return null;
-  }
+    return { coordinates: route.geometry.coordinates.map(c => [c[1], c[0]]), distance: (route.distance / 1000).toFixed(2), duration: Math.round(route.duration / 60) };
+  } catch (err) { return null; }
 }
 
 function addCustomerPoint(lat, lng, label) {
   if (customerPoints.length >= 2) return;
-  customerPoints.push({ lat: lat, lng: lng, label: label || "" });
-  
+  customerPoints.push({ lat, lng, label: label || "" });
   const defaultLabel = customerPoints.length === 1 ? "📍 نقطة الانطلاق" : "🏁 الوجهة";
-  const markerLabel = label ? '<span dir="auto">📍 ' + label + '</span>' : defaultLabel;
-  const newMarker = L.marker([lat, lng]).addTo(customerMap).bindPopup(markerLabel).openPopup();
-  customerMarkers.push(newMarker);
+  const markerLabel = label ? "📍 " + label : defaultLabel;
+  customerMarkers.push(L.marker([lat, lng]).addTo(customerMap).bindPopup(markerLabel).openPopup());
   
   if (customerPoints.length === 2) {
     document.getElementById("request-btn").disabled = false;
-    const p1 = customerPoints[0];
-    const p2 = customerPoints[1];
-    
+    const p1 = customerPoints[0], p2 = customerPoints[1];
     const tempLine = L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], { color: "#999", weight: 4, dashArray: "5, 10" }).addTo(customerMap);
-    
     getRoute(p1.lat, p1.lng, p2.lat, p2.lng).then(route => {
       customerMap.removeLayer(tempLine);
       if (route) {
-        L.polyline(route.coordinates, { color: "#007bff", weight: 6, opacity: 0.8, lineJoin: "round", lineCap: "round" }).addTo(customerMap);
-        document.getElementById("customer-hint").innerHTML = `✅ جاهز للطلب — <b>المسافة:</b> ${route.distance} كم — <b>الوقت المتوقع:</b> ${route.duration} دقيقة`;
+        L.polyline(route.coordinates, { color: "#007bff", weight: 6, opacity: 0.8 }).addTo(customerMap);
+        document.getElementById("customer-hint").innerHTML = '✅ جاهز — <b>المسافة:</b> ' + route.distance + ' كم — <b>الوقت:</b> ' + route.duration + ' دقيقة';
       } else {
         L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], { color: "blue", weight: 4 }).addTo(customerMap);
-        document.getElementById("customer-hint").textContent = "✅ جاهز للطلب";
       }
     });
   } else {
-    document.getElementById("customer-hint").textContent = "🎯 حدد الوجهة — انقر على الخريطة، أو استخدم موقعي، أو ابحث بالعنوان";
+    document.getElementById("customer-hint").textContent = "🎯 حدد الوجهة";
   }
 }
 
 function useMyLocation() {
-  if (!customerGPSLat || !customerGPSLng) { notify("⚠️ لم يتم تحديد موقعك بعد. انتظر قليلاً."); return; }
-  if (currentRideId) { notify("⚠️ لا يمكن التعديل أثناء رحلة"); return; }
+  if (!customerGPSLat || !customerGPSLng) { notify("⚠️ لم يتم تحديد موقعك"); return; }
+  if (currentRideId) { notify("⚠️ لا يمكن التعديل"); return; }
   addCustomerPoint(customerGPSLat, customerGPSLng, "موقعي الحالي");
-  notify("✅ تم تحديد موقعك كنقطة انطلاق");
 }
 
 function selectSearchResult(result) {
-  if (currentRideId) { notify("⚠️ لا يمكن التعديل أثناء رحلة"); return; }
-  if (customerPoints.length >= 2) { notify("⚠️ تم تحديد النقطتين. اضغط 'مسح' لإعادة التحديد."); return; }
+  if (currentRideId || customerPoints.length >= 2) return;
   addCustomerPoint(result.lat, result.lng, result.name);
   document.getElementById("search-box").classList.remove("active");
   document.getElementById("search-input").value = "";
@@ -797,11 +578,10 @@ function selectSearchResult(result) {
 
 window.cancelRide = () => {
   if (!currentRideId) return;
-  if (!confirm("هل تريد إلغاء الطلب؟")) return;
+  if (!confirm("إلغاء الطلب؟")) return;
   socket.emit("cancel-ride", { rideId: currentRideId, cancelledBy: "customer" });
   document.getElementById("ride-status").innerHTML = "";
   currentRideId = null;
-  notify("✅ تم إلغاء الطلب");
   clearSelection();
 };
 
@@ -809,11 +589,9 @@ window.clearSelection = () => {
   customerMarkers.forEach(m => m.remove());
   customerMarkers = []; customerPoints = [];
   document.getElementById("request-btn").disabled = true;
-  document.getElementById("customer-hint").textContent = "📍 انقر على الخريطة، أو استخدم 'استخدام موقعي'، أو ابحث بالعنوان";
+  document.getElementById("customer-hint").textContent = "📍 انقر على الخريطة";
   document.getElementById("ride-status").innerHTML = "";
-  if (customerMap) {
-    customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
-  }
+  if (customerMap) customerMap.eachLayer(l => { if (l instanceof L.Polyline) l.remove(); });
 };
 
 // ═══════════════════════════════════════
@@ -826,97 +604,69 @@ let locationInterval = null;
 
 function initDriverApp() {
   if (driverMap) return;
-  if (typeof io !== "undefined") {
-    driverSocket = io();
-  } else {
-    console.error("Socket.io library not loaded.");
-    return;
-  }
-
+  if (typeof io === "undefined") return;
+  driverSocket = io();
+  
   driverMap = L.map("driver-map").setView(LEBANON_CENTER, LEBANON_ZOOM);
   addMapLayers(driverMap);
   driverMap.on("moveend", () => scheduleLoadPOIs(driverMap));
   driverMap.on("zoomend", () => scheduleLoadPOIs(driverMap));
   setTimeout(() => loadPOIs(driverMap), 2000);
 
-  if (!navigator.geolocation) { alert("⚠️ متصفحك لا يدعم تحديد الموقع"); return; }
-
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      myLat = pos.coords.latitude; myLng = pos.coords.longitude;
-      if (driverMarker) { driverMarker.setLatLng([myLat, myLng]); } 
-      else { driverMarker = L.marker([myLat, myLng]).addTo(driverMap).bindPopup("📍 موقعي").openPopup(); driverMap.setView([myLat, myLng], 15); }
-    },
-    (err) => console.error("GPS:", err),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
+  if (!navigator.geolocation) { alert("⚠️ لا يدعم الموقع"); return; }
+  navigator.geolocation.watchPosition((pos) => {
+    myLat = pos.coords.latitude; myLng = pos.coords.longitude;
+    if (driverMarker) driverMarker.setLatLng([myLat, myLng]);
+    else { driverMarker = L.marker([myLat, myLng]).addTo(driverMap).bindPopup("موقعي").openPopup(); driverMap.setView([myLat, myLng], 15); }
+  }, (err) => console.error("GPS:", err), { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 
   locationInterval = setInterval(() => {
-    if (isOnline) { driverSocket.emit("driver-location", { driverId: API.user.id, lat: myLat, lng: myLng }); }
+    if (isOnline) driverSocket.emit("driver-location", { driverId: API.user.id, lat: myLat, lng: myLng });
   }, LOCATION_UPDATE_INTERVAL);
 
   document.getElementById("toggle-online").onclick = () => {
     isOnline = !isOnline;
     const btn = document.getElementById("toggle-online");
-    btn.textContent = isOnline ? "⛔ إيقاف الاستقبال" : "🟢 ابدأ استقبال الطلبات";
+    btn.textContent = isOnline ? "⛔ إيقاف" : "🟢 ابدأ استقبال";
     btn.style.background = isOnline ? "#28a745" : "#ffc107";
     btn.style.color = isOnline ? "#fff" : "#111";
-    
     if (isOnline) {
       driverSocket.emit("driver-online", { driverId: API.user.id, name: API.user.name, carModel: API.user.carModel, carPlate: API.user.carPlate, lat: myLat, lng: myLng });
-      notify("✅ بدأت الاستقبال");
+      notify("✅ بدأت");
     } else {
       driverSocket.emit("driver-offline", { driverId: API.user.id });
-      notify("⛔ أوقفت الاستقبال");
+      notify("⛔ أوقفت");
     }
   };
 
   driverSocket.on("ride-confirmed", ({ rideId, ride, etaMin }) => {
     currentRide = { _id: rideId, ...ride, etaMin };
-    document.getElementById("requests-list").innerHTML = `
-      <div class="info-card">
-        <h4>🧍 بيانات الزبون</h4>
-        <p><b>👤 الاسم:</b> ${ride.customer?.name || "غير معروف"}</p>
-        <p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p>
-        <p><b>📍 الانطلاق:</b> ${ride.from.address || "موقع الزبون"}</p>
-        <p><b>🏁 الوجهة:</b> ${ride.to.address || "الوجهة"}</p>
-        <p><b>⏱️ وقت الوصول:</b> ${etaMin} دقيقة</p>
-        <a href="tel:${ride.customer?.phone}" class="btn-call">📞 اتصال بالزبون</a>
-        <button class="btn-arrived" style="background:#ff9800;color:#fff;margin-top:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer" onclick="arrivedAtCustomer()">📍 وصلت لموقع الزبون</button>
-        <button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button>
-        <button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء الرحلة</button>
-      </div>`;
+    document.getElementById("requests-list").innerHTML = '<div class="info-card"><h4>🧍 الزبون</h4><p><b>👤:</b> ' + (ride.customer ? ride.customer.name : "?") + '</p><p><b>📞:</b> ' + (ride.customer ? ride.customer.phone : "?") + '</p><p><b>📍:</b> ' + (ride.from.address || "موقع الزبون") + '</p><p><b>🏁:</b> ' + (ride.to.address || "الوجهة") + '</p><p><b>⏱️:</b> ' + etaMin + ' دقيقة</p><a href="tel:' + (ride.customer ? ride.customer.phone : "") + '" class="btn-call">📞 اتصال</a><button class="btn-arrived" style="background:#ff9800;color:#fff;margin-top:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointer" onclick="arrivedAtCustomer()">📍 وصلت</button><button class="btn-danger" style="margin-top:10px;width:100%" onclick="cancelRideDriver()">❌ إلغاء</button><button class="btn-accept" style="background:#28a745;margin-top:8px" onclick="completeRide()">✅ إنهاء</button></div>';
     
     const fromLat = ride.from.lat, fromLng = ride.from.lng;
     const toLat = ride.to.lat, toLng = ride.to.lng;
-    
     L.marker([fromLat, fromLng]).addTo(driverMap).bindPopup("🟢 الزبون").openPopup();
     L.marker([toLat, toLng]).addTo(driverMap).bindPopup("🔴 الوجهة");
-    
     const tempLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], { color: "#999", weight: 4, dashArray: "5, 10" }).addTo(driverMap);
     getRoute(fromLat, fromLng, toLat, toLng).then(route => {
       driverMap.removeLayer(tempLine);
-      if (route) { L.polyline(route.coordinates, { color: "#007bff", weight: 6, opacity: 0.85, lineJoin: "round", lineCap: "round" }).addTo(driverMap); } 
-      else { L.polyline([[fromLat, fromLng], [toLat, toLng]], { color: "blue", weight: 5, dashArray: "10,10" }).addTo(driverMap); }
+      if (route) L.polyline(route.coordinates, { color: "#007bff", weight: 6, opacity: 0.85 }).addTo(driverMap);
+      else L.polyline([[fromLat, fromLng], [toLat, toLng]], { color: "blue", weight: 5, dashArray: "10,10" }).addTo(driverMap);
     });
     driverMap.fitBounds([[fromLat, fromLng], [toLat, toLng], [myLat, myLng]], { padding: [50, 50] });
-    notify("✅ تم تأكيد القبول");
+    notify("✅ تم القبول");
   });
 
   driverSocket.on("ride-request", (ride) => {
-    if (currentRide) return;
-    if (document.getElementById("ride-" + ride._id)) return;
-    
+    if (currentRide || document.getElementById("ride-" + ride._id)) return;
     const card = document.createElement("div");
     card.className = "ride-card"; card.id = "ride-" + ride._id;
-    const distanceInfo = ride.distanceToCustomer ? `<p style="color:#28a745;font-weight:bold">📏 المسافة: ${ride.distanceToCustomer} كم</p><p style="color:#007bff;font-weight:bold">⏱️ الوصول المتوقع: ${ride.etaMin} دقيقة</p>` : "";
-    
-    card.innerHTML = `<h4>🚕 طلب جديد</h4>${distanceInfo}<p><b>👤 الزبون:</b> ${ride.customer?.name || "غير معروف"}</p><p><b>📞 الهاتف:</b> ${ride.customer?.phone || "غير معروف"}</p><p><b>📍 من:</b> ${ride.from.address || "موقع الزبون"}</p><p><b>🏁 إلى:</b> ${ride.to.address || "الوجهة"}</p><button class="btn-accept" onclick="acceptRide('${ride._id}', ${ride.etaMin || 0})">✅ قبول الطلب</button>`;
+    const dInfo = ride.distanceToCustomer ? '<p style="color:#28a745"><b>📏:</b> ' + ride.distanceToCustomer + ' كم</p><p style="color:#007bff"><b>⏱️:</b> ' + ride.etaMin + ' دقيقة</p>' : "";
+    card.innerHTML = '<h4>🚕 طلب جديد</h4>' + dInfo + '<p><b>👤:</b> ' + (ride.customer ? ride.customer.name : "?") + '</p><p><b>📞:</b> ' + (ride.customer ? ride.customer.phone : "?") + '</p><p><b>📍:</b> ' + (ride.from.address || "موقع الزبون") + '</p><p><b>🏁:</b> ' + (ride.to.address || "الوجهة") + '</p><button class="btn-accept" onclick="acceptRide(\'' + ride._id + '\', ' + (ride.etaMin || 0) + ')">✅ قبول</button>';
     document.getElementById("requests-list").appendChild(card);
-    
     playBeep("new_ride");
     if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
-    notify(`🚕 طلب جديد — ${ride.distanceToCustomer} كم`);
+    notify("🚕 طلب جديد");
   });
 
   driverSocket.on("ride-removed", ({ rideId }) => {
@@ -928,7 +678,7 @@ function initDriverApp() {
   });
 
   driverSocket.on("ride-unavailable", ({ rideId }) => {
-    document.getElementById("ride-" + rideId)?.remove(); notify("⚠️ الرحلة اتخذها سائق آخر");
+    document.getElementById("ride-" + rideId)?.remove(); notify("⚠️ سائق آخر أخذها");
   });
 
   driverSocket.on("customer-cancelled", ({ rideId }) => {
@@ -936,21 +686,18 @@ function initDriverApp() {
     if (currentRide && currentRide._id === rideId) {
       currentRide = null; document.getElementById("requests-list").innerHTML = "";
       driverMap.eachLayer(l => { if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove(); });
-      notify("⚠️ الزبون ألغى الطلب");
+      notify("⚠️ الزبون ألغى");
     }
   });
 }
 
-// ═══════════════════════════════════════
-// 📍 أزرار التحكم والعمليات العامة
-// ═══════════════════════════════════════
 window.arrivedAtCustomer = () => {
   if (!currentRide) return;
-  if (!confirm("هل وصلت لموقع الزبون؟")) return;
+  if (!confirm("وصلت للزبون؟")) return;
   driverSocket.emit("driver-arrived", { rideId: currentRide._id, driverId: API.user.id });
-  playBeep("arrived"); notify("✅ تم إشعار الزبون");
+  playBeep("arrived"); notify("✅ تم");
   const btn = document.querySelector(".btn-arrived");
-  if (btn) { btn.textContent = "✅ تم إشعار الزبون"; btn.disabled = true; btn.style.background = "#28a745"; }
+  if (btn) { btn.textContent = "✅ تم"; btn.disabled = true; btn.style.background = "#28a745"; }
 };
 
 window.acceptRide = (rideId, etaMin) => {
@@ -958,16 +705,15 @@ window.acceptRide = (rideId, etaMin) => {
   const card = document.getElementById("ride-" + rideId);
   if (card) currentRide = { _id: rideId, etaMin };
   document.getElementById("requests-list").innerHTML = "";
-  notify("⏳ جاري تأكيد القبول...");
+  notify("⏳ جاري التأكيد...");
 };
 
 window.cancelRideDriver = () => {
-  if (!currentRide) return;
-  if (!confirm("هل تريد إلغاء الطلب؟ سيتم البحث عن سائق آخر للزبون.")) return;
+  if (!currentRide || !confirm("إلغاء الطلب؟")) return;
   driverSocket.emit("cancel-ride", { rideId: currentRide._id, cancelledBy: "driver" });
   currentRide = null; document.getElementById("requests-list").innerHTML = "";
   driverMap.eachLayer(l => { if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove(); });
-  driverMap.setView([myLat, myLng], 15); notify("✅ تم إلغاء الطلب");
+  driverMap.setView([myLat, myLng], 15); notify("✅ تم الإلغاء");
 };
 
 window.completeRide = () => {
@@ -975,16 +721,15 @@ window.completeRide = () => {
   driverSocket.emit("ride-completed", { driverId: API.user.id, rideId: currentRide._id });
   currentRide = null; document.getElementById("requests-list").innerHTML = "";
   driverMap.eachLayer(l => { if ((l instanceof L.Polyline || l instanceof L.Marker) && l !== driverMarker) l.remove(); });
-  driverMap.setView([myLat, myLng], 15); notify("✅ تم إنهاء الرحلة");
+  driverMap.setView([myLat, myLng], 15); notify("✅ تم الإنهاء");
 };
 
 // ═══════════════════════════════════════
-// 🚀 ربط معالجات الأحداث للنماذج عند جاهزية DOM
+// 🚀 النماذج
 // ═══════════════════════════════════════
 window.addEventListener("DOMContentLoaded", function() {
-  console.log("🔄 DOM ready, attaching form handlers...");
+  console.log("🔄 DOM ready");
   
-  // ═══ تسجيل الدخول ═══
   var loginForm = document.getElementById("login-form");
   if (loginForm) {
     loginForm.addEventListener("submit", async function(e) {
@@ -994,24 +739,16 @@ window.addEventListener("DOMContentLoaded", function() {
       var password = document.getElementById("login-password").value;
       var errEl = document.getElementById("login-error");
       errEl.textContent = "";
-      
       try {
-        var res = await fetch("/api/auth/login", { 
-          method: "POST", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify({ phone: phone, password: password }) 
-        });
+        var res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone, password: password }) });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);
         routeByRole();
-      } catch (err) { 
-        errEl.textContent = "خطأ في الاتصال"; 
-      }
+      } catch (err) { errEl.textContent = "خطأ"; }
     });
   }
   
-  // ═══ التسجيل ═══
   var registerForm = document.getElementById("register-form");
   if (registerForm) {
     registerForm.addEventListener("submit", async function(e) {
@@ -1027,48 +764,23 @@ window.addEventListener("DOMContentLoaded", function() {
       errEl.textContent = "";
       
       try {
-        // تحقق من الحظر
         try {
-          var checkRes = await fetch("/api/check-block", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deviceId: deviceFingerprint, phone: phone })
-          });
+          var checkRes = await fetch("/api/check-block", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: deviceFingerprint, phone: phone }) });
           var checkData = await checkRes.json();
-          if (checkData.blocked) {
-            errEl.textContent = "🚫 " + checkData.reason;
-            return;
-          }
-        } catch (e) {
-          console.warn("Block check failed:", e);
-        }
+          if (checkData.blocked) { errEl.textContent = "🚫 " + checkData.reason; return; }
+        } catch (e) {}
         
-        // سجّل المستخدم
-        var res = await fetch("/api/auth/register", { 
-          method: "POST", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify({ 
-            name: name, 
-            phone: phone, 
-            password: password, 
-            role: role, 
-            carModel: carModel, 
-            carPlate: carPlate, 
-            deviceId: deviceFingerprint 
-          }) 
-        });
+        var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate, deviceId: deviceFingerprint }) });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);
         routeByRole();
-      } catch (err) { 
-        errEl.textContent = "خطأ في الاتصال"; 
-      }
+      } catch (err) { errEl.textContent = "خطأ"; }
     });
   }
   
   routeByRole();
-});                         
+});
 
 </script>
 </body>
