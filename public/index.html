@@ -981,7 +981,7 @@ window.addEventListener("DOMContentLoaded", function() {
         console.warn("Block check failed:", e);
       }
       
-      var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate, deviceId: deviceFingerprint }) });
+      var res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, password: password, role: role, carModel: carModel, carPlate: carPlate, deviceId: deviceFingerprint }) 
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);

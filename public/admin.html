@@ -326,6 +326,26 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
     </table>
   </div>
 </div>
+<!-- تبويب المحظورين -->
+<div id="tab-blocked" class="users-section hidden">
+  <h2>🚫 الأجهزة المحظورة</h2>
+  <div style="overflow-x:auto">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Device ID</th>
+          <th>رقم الهاتف</th>
+          <th>السبب</th>
+          <th>تاريخ الحظر</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody id="blocked-list">
+        <tr><td colspan="5" style="text-align:center;padding:20px;color:#999">⏳ جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
   <!-- تبويب الخريطة -->
   <div id="tab-map" class="map-section hidden">
     <h2>🗺️ مواقع السائقين المتصلين</h2>
@@ -474,27 +494,39 @@ function filterUsers() {
 
 // ═══ حذف مستخدم ═══
 async function deleteUser(userId, userName, deviceId, phone) {
-  if (!confirm(`هل تريد حذف "${userName}"؟\n\n⚠️ سيتم:\n- حذف الحساب\n- حظر الجهاز\n- حذف كل رحلاته`)) {
-    return;
-  }
+  if (!confirm(`هل تريد حذف "${userName}"؟\n\n⚠️ سيتم:\n- حظر الجهاز\n- حظر رقم الهاتف\n- حذف الحساب\n- حذف كل رحلاته`)) return;
   
   try {
-    // ═══ 1. احظر الجهاز ═══
     if (deviceId) {
       await fetch(`${API_BASE}/api/admin/block-device`, {
         method: "POST",
-        headers: { 
-          "x-admin-password": ADMIN_PASSWORD,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          deviceId: deviceId,
-          phone: phone,
-          reason: "حذف الحساب",
-          blockedBy: "admin"
-        })
+        headers: { "x-admin-password": ADMIN_PASSWORD, "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: deviceId, phone: phone, reason: "حذف الحساب" })
       });
     }
+    
+    if (phone) {
+      await fetch(`${API_BASE}/api/admin/block-device`, {
+        method: "POST",
+        headers: { "x-admin-password": ADMIN_PASSWORD, "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: "phone_" + phone, phone: phone, reason: "حذف الحساب" })
+      });
+    }
+    
+    const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: { "x-admin-password": ADMIN_PASSWORD }
+    });
+    
+    if (!res.ok) { alert("❌ فشل الحذف"); return; }
+    
+    alert(`✅ تم حذف ${userName} وحظر جهازه`);
+    await refreshAll();
+  } catch (err) {
+    console.error(err);
+    alert("❌ خطأ");
+  }
+}
     
     // ═══ 2. احظر رقم الهاتف أيضاً ═══
     if (phone) {
@@ -536,9 +568,7 @@ async function deleteUser(userId, userName, deviceId, phone) {
 async function refreshAll() {
   await refreshStats();
   await refreshUsers();
-  if (typeof refreshBlockedDevices === "function") {
-    await refreshBlockedDevices();
-  }
+  if (typeof refreshBlockedDevices === "function") await refreshBlockedDevices();
 }
 
 // ═══ التبويبات ═══
@@ -550,10 +580,7 @@ function showTab(tab) {
   document.getElementById("tab-map").classList.add("hidden");
   document.getElementById("tab-blocked").classList.add("hidden");
   
-  if (mapRefreshInterval) {
-    clearInterval(mapRefreshInterval);
-    mapRefreshInterval = null;
-  }
+  if (mapRefreshInterval) { clearInterval(mapRefreshInterval); mapRefreshInterval = null; }
   
   if (tab === "users") {
     document.getElementById("tab-users").classList.remove("hidden");
@@ -649,65 +676,37 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 });
 // ═══ تحميل الأجهزة المحظورة ═══
+ 
+ // ═══ تحميل المحظورين ═══
 async function refreshBlockedDevices() {
   try {
     const res = await fetch(`${API_BASE}/api/admin/blocked-devices`, {
       headers: { "x-admin-password": ADMIN_PASSWORD }
     });
-    
     if (!res.ok) return;
     const blocked = await res.json();
-    
     const tbody = document.getElementById("blocked-list");
-    
     if (blocked.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">لا يوجد محظورون</td></tr>';
       return;
     }
-    
     tbody.innerHTML = blocked.map(b => {
       const date = new Date(b.blockedAt).toLocaleDateString("ar-LB");
-      const deviceShort = b.deviceId.startsWith("phone_") 
-        ? "📱 " + b.deviceId.replace("phone_", "") 
-        : b.deviceId.substring(0, 16) + "...";
-      
-      return `
-        <tr>
-          <td><code style="font-size:11px">${deviceShort}</code></td>
-          <td>${b.phone || "-"}</td>
-          <td>${b.reason || "-"}</td>
-          <td>${date}</td>
-          <td>
-            <button class="delete-btn" style="background:#28a745" onclick="unblockDevice('${b.deviceId}')">✅ فك الحظر</button>
-          </td>
-        </tr>
-      `;
+      const short = b.deviceId.startsWith("phone_") ? "📱 " + b.deviceId.replace("phone_", "") : b.deviceId.substring(0, 16) + "...";
+      return '<tr><td><code style="font-size:11px">' + short + '</code></td><td>' + (b.phone || "-") + '</td><td>' + (b.reason || "-") + '</td><td>' + date + '</td><td><button class="delete-btn" style="background:#28a745" onclick="unblockDevice(\'' + b.deviceId + '\')">✅ فك الحظر</button></td></tr>';
     }).join("");
-  } catch (err) {
-    console.error("Blocked devices error:", err);
-  }
+  } catch (err) { console.error(err); }
 }
 
-// ═══ فك الحظر ═══
 async function unblockDevice(deviceId) {
-  if (!confirm("هل تريد فك الحظر؟")) return;
-  
+  if (!confirm("فك الحظر؟")) return;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/block-device/${deviceId}`, {
+    const res = await fetch(`${API_BASE}/api/admin/block-device/${encodeURIComponent(deviceId)}`, {
       method: "DELETE",
       headers: { "x-admin-password": ADMIN_PASSWORD }
     });
-    
-    if (!res.ok) {
-      alert("❌ فشل");
-      return;
-    }
-    
-    alert("✅ تم فك الحظر");
-    await refreshAll();
-  } catch (err) {
-    alert("❌ خطأ");
-  }
+    if (res.ok) { alert("✅ تم"); await refreshAll(); }
+  } catch (err) { alert("❌ خطأ"); }
 }
 </script>
 </body>
