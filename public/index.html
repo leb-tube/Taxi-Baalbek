@@ -217,7 +217,59 @@ input:focus { outline: none; border-color: #ffc107; }
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"><script>
+// ═══════════════════════════════════════
+// 🔍 Device Fingerprint (inline)
+// ═══════════════════════════════════════
+async function getDeviceFingerprint() {
+  let stored = localStorage.getItem("device_fingerprint");
+  if (stored) return stored;
+  
+  const components = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || 0,
+    navigator.platform || "unknown",
+  ];
+  
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.textBaseline = "top";
+    ctx.font = "14px Arial";
+    ctx.fillText("TaxiApp-Fingerprint", 2, 2);
+    components.push(canvas.toDataURL().slice(-50));
+  } catch (e) {}
+  
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    if (debugInfo) components.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+  } catch (e) {}
+  
+  const raw = components.join("|");
+  const buffer = new TextEncoder().encode(raw);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  
+  localStorage.setItem("device_fingerprint", hash);
+  return hash;
+}
+
+// ═══ Device Fingerprint ═══
+let deviceFingerprint = null;
+getDeviceFingerprint().then(fp => {
+  deviceFingerprint = fp;
+  console.log("🔍 Device ID:", fp.substring(0, 20) + "...");
+}).catch(err => {
+  console.error("Fingerprint error:", err);
+  deviceFingerprint = "unknown_" + Date.now();
+});
+</script></script>
 <script src="/fingerprint.js?v=2"></script>
 <script>
 const LEBANON_CENTER = [33.8547, 35.8623];
