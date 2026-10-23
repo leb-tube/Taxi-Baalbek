@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>QR Code - Taxi Lebanon</title>
+<style>
+body {
+  font-family: Tahoma, sans-serif;
+  background: #f0f2f5;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,.1);
+  max-width: 500px;
+}
+h1 { color: #111; margin-bottom: 10px; }
+.subtitle { color: #666; margin-bottom: 30px; }
+.qr-container {
+  background: #ffc107;
+  padding: 20px;
+  border-radius: 16px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+img { display: block; max-width: 100%; border-radius: 8px; }
+.url {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+  margin-top: 20px;
+}
+.print-btn {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  padding: 14px 30px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+}
+.print-btn:hover { background: #218838; }
+@media print {
+  body { background: #fff; }
+  .print-btn { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🚕 Taxi Lebanon</h1>
+  <p class="subtitle">امسح الكود بتطبيق الكاميرا لتثبيت التطبيق</p>
+  
+  <div class="qr-container">
+    <img id="qr-img" 
+         src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=111111&bgcolor=ffffff&data=https://taxi-baalbek.onrender.com/install" 
+         alt="QR Code">
+  </div>
+  
+  <p style="font-size:14px;color:#666">
+    أو افتح الرابط مباشرة:
+  </p>
+  <div class="url">https://taxi-baalbek.onrender.com/install</div>
+  
+  <button class="print-btn" onclick="window.print()">
+    🖨️ طباعة QR Code
+  </button>
+</div>
+
+</body>
+</html>

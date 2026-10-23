@@ -301,7 +301,10 @@ app.get("/api/search", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// ═══ صفحة التثبيت ═══
+app.get("/install", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "install.html"));
+});
 // ═══════════════════════════════════════════════════════════
 // 📚 Routes
 // ═══════════════════════════════════════════════════════════

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تثبيت Taxi Lebanon</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Tahoma, sans-serif;
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 30px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+  text-align: center;
+}
+.logo {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+h1 {
+  font-size: 28px;
+  color: #111;
+  margin-bottom: 10px;
+}
+.subtitle {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+.step {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  text-align: right;
+}
+.step-num {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  background: #ffc107;
+  color: #111;
+  border-radius: 50%;
+  font-weight: bold;
+  text-align: center;
+  line-height: 32px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.step-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #111;
+  display: inline-block;
+  vertical-align: middle;
+}
+.step-desc {
+  color: #666;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-right: 42px;
+}
+.step-icon {
+  font-size: 22px;
+  margin-left: 5px;
+}
+.btn {
+  display: block;
+  background: #28a745;
+  color: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 20px;
+  transition: .2s;
+}
+.btn:hover {
+  background: #218838;
+  transform: scale(1.02);
+}
+.btn-secondary {
+  background: #007bff;
+  margin-top: 10px;
+}
+.btn-secondary:hover { background: #0056b3; }
+.platform-badge {
+  display: inline-block;
+  background: #111;
+  color: #fff;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin: 5px;
+  font-weight: bold;
+}
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">🚕</div>
+  <h1>Taxi Lebanon</h1>
+  <p class="subtitle">ثبّت التطبيق على هاتفك الآن</p>
+
+  <!-- ═══ Android ═══ -->
+  <div id="android-steps" class="hidden">
+    <div class="platform-badge">📱 Android</div>
+    
+    <div class="step">
+      <span class="step-num">1</span>
+      <span class="step-title">افتح الموقع في Chrome</span>
+      <p class="step-desc">اضغط "متابعة إلى الموقع" في الأسفل</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">2</span>
+      <span class="step-title">اضغط على ⋮ (ثلاث نقاط)</span>
+      <p class="step-desc">في أعلى يمين شاشة Chrome</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">3</span>
+      <span class="step-title">اختر "تثبيت التطبيق"</span>
+      <p class="step-desc">أو "إضافة إلى الشاشة الرئيسية"</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">4</span>
+      <span class="step-title">اضغط "تثبيت"</span>
+      <p class="step-desc">ستظهر أيقونة 🚕 على شاشة هاتفك</p>
+    </div>
+  </div>
+
+  <!-- ═══ iOS ═══ -->
+  <div id="ios-steps" class="hidden">
+    <div class="platform-badge">📱 iPhone / iPad</div>
+    
+    <div class="step">
+      <span class="step-num">1</span>
+      <span class="step-title">افتح الموقع في Safari</span>
+      <p class="step-desc">⚠️ يجب استخدام Safari (وليس Chrome)</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">2</span>
+      <span class="step-title">اضغط زر المشاركة ⎋</span>
+      <p class="step-desc">المربع مع السهم (أسفل الشاشة)</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">3</span>
+      <span class="step-title">اختر "إضافة إلى الشاشة الرئيسية"</span>
+      <p class="step-desc">اسحب القائمة للأسفل للعثور عليها</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">4</span>
+      <span class="step-title">اضغط "إضافة"</span>
+      <p class="step-desc">ستظهر أيقونة 🚕 على شاشة هاتفك</p>
+    </div>
+  </div>
+
+  <!-- ═══ Desktop ═══ -->
+  <div id="desktop-steps" class="hidden">
+    <div class="platform-badge">💻 Desktop</div>
+    
+    <div class="step">
+      <span class="step-num">1</span>
+      <span class="step-title">افتح الموقع في Chrome أو Edge</span>
+      <p class="step-desc">اضغط "متابعة إلى الموقع"</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">2</span>
+      <span class="step-title">ابحث عن ⊕ (Install)</span>
+      <p class="step-desc">في شريط العنوان على اليمين</p>
+    </div>
+    
+    <div class="step">
+      <span class="step-num">3</span>
+      <span class="step-title">اضغط "تثبيت"</span>
+      <p class="step-desc">سيفتح كتطبيق مستقل</p>
+    </div>
+  </div>
+
+  <!-- ═══ أزرار ═══ -->
+  <a href="/" class="btn">
+    🚀 متابعة إلى الموقع
+  </a>
+  
+  <p style="color:#999;font-size:12px;margin-top:20px">
+    بعد التثبيت، افتح التطبيق من أيقونة 🚕 على شاشتك
+  </p>
+</div>
+
+<script>
+// ═══ اكتشاف نوع الجهاز ═══
+function detectPlatform() {
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  const isMobile = isIOS || isAndroid;
+  
+  let platform = "desktop";
+  if (isIOS) platform = "ios";
+  else if (isAndroid) platform = "android";
+  
+  return platform;
+}
+
+// ═══ عرض التعليمات المناسبة ═══
+window.addEventListener("DOMContentLoaded", () => {
+  const platform = detectPlatform();
+  
+  document.getElementById(platform + "-steps").classList.remove("hidden");
+  
+  console.log("📱 Platform detected:", platform);
+  
+  // ═══ إذا كان التطبيق مثبتاً، اذهب مباشرة ═══
+  if (window.matchMedia("(display-mode: standalone)").matches) {
+    window.location.href = "/";
+  }
+});
+</script>
+
+</body>
+</html>
