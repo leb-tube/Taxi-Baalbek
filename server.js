@@ -13,7 +13,10 @@ const rideRoutes = require("./routes/rides");
 const Ride = require("./models/Ride");
 const User = require("./models/User");
 const BlockedDevice = require("./models/BlockedDevice");
-// ═══ App Setup ═══
+
+// ═══════════════════════════════════════════════════════════
+// ⚙️ App Setup
+// ═══════════════════════════════════════════════════════════
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -23,14 +26,21 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("io", io);
 
 // ═══════════════════════════════════════════════════════════
-// 🗺️ POI Cache (in-memory)
+// 💾 In-Memory Storage (يجب أن يكون في الأعلى)
+// ═══════════════════════════════════════════════════════════
+const onlineDrivers = new Map();
+const pendingRides = new Map();
+const activeRides = new Map();
+
+// ═══════════════════════════════════════════════════════════
+// 🗺️ POI Cache
 // ═══════════════════════════════════════════════════════════
 const poiCache = new Map();
-const POI_CACHE_TTL = 30 * 60 * 1000; // 30 دقيقة
+const POI_CACHE_TTL = 30 * 60 * 1000;
 const POI_CACHE_MAX_SIZE = 500;
 
 // ═══════════════════════════════════════════════════════════
-// 🔐 Admin Routes
+// 🔐 Admin Auth
 // ═══════════════════════════════════════════════════════════
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin2026";
 
@@ -41,11 +51,10 @@ function checkAdmin(req, res, next) {
   }
   next();
 }
-// ═══════════════════════════════════════
-// 🚫 إدارة الحظر
-// ═══════════════════════════════════════
 
-// ═══ التحقق من الحظر (يستخدمه العميل) ═══
+// ═══════════════════════════════════════════════════════════
+// 🚫 الحظر - Check Block (Public)
+// ═══════════════════════════════════════════════════════════
 app.post("/api/check-block", async (req, res) => {
   try {
     const { deviceId, phone } = req.body;
@@ -53,25 +62,16 @@ app.post("/api/check-block", async (req, res) => {
     if (deviceId) {
       const blocked = await BlockedDevice.findOne({ deviceId });
       if (blocked) {
-        return res.json({ 
-          blocked: true, 
-          reason: blocked.reason || "هذا الجهاز محظور" 
-        });
+        return res.json({ blocked: true, reason: blocked.reason || "هذا الجهاز محظور" });
       }
     }
     
     if (phone) {
       const blockedPhone = await BlockedDevice.findOne({ 
-        $or: [
-          { phone: phone },
-          { deviceId: "phone_" + phone }
-        ]
+        $or: [{ phone: phone }, { deviceId: "phone_" + phone }]
       });
       if (blockedPhone) {
-        return res.json({ 
-          blocked: true, 
-          reason: blockedPhone.reason || "هذا الرقم محظور" 
-        });
+        return res.json({ blocked: true, reason: blockedPhone.reason || "هذا الرقم محظور" });
       }
     }
     
@@ -81,53 +81,9 @@ app.post("/api/check-block", async (req, res) => {
   }
 });
 
-// ═══ قائمة المحظورين ═══
-app.get("/api/admin/blocked-devices", checkAdmin, async (req, res) => {
-  try {
-    const blocked = await BlockedDevice.find({}).sort({ blockedAt: -1 });
-    res.json(blocked);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ═══ حظر جهاز ═══
-app.post("/api/admin/block-device", checkAdmin, async (req, res) => {
-  try {
-    const { deviceId, phone, reason } = req.body;
-    
-    if (!deviceId) {
-      return res.status(400).json({ error: "deviceId مطلوب" });
-    }
-    
-    const exists = await BlockedDevice.findOne({ deviceId });
-    if (exists) {
-      return res.json({ success: true, message: "محظور بالفعل" });
-    }
-    
-    await BlockedDevice.create({
-      deviceId: deviceId,
-      phone: phone || "",
-      reason: reason || "حظر إداري"
-    });
-    
-    console.log(`🚫 حظر جهاز: ${deviceId.substring(0, 16)}...`);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ═══ فك الحظر ═══
-app.delete("/api/admin/block-device/:deviceId", checkAdmin, async (req, res) => {
-  try {
-    await BlockedDevice.deleteOne({ deviceId: req.params.deviceId });
-    console.log(`✅ فك حظر: ${req.params.deviceId.substring(0, 16)}...`);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// ═══════════════════════════════════════════════════════════
+// 🔐 Admin Routes
+// ═══════════════════════════════════════════════════════════
 
 // ═══ إحصائيات ═══
 app.get("/api/admin/stats", checkAdmin, async (req, res) => {
@@ -136,19 +92,15 @@ app.get("/api/admin/stats", checkAdmin, async (req, res) => {
     const customers = await User.countDocuments({ role: "customer" });
     const drivers = await User.countDocuments({ role: "driver" });
     const totalRides = await Ride.countDocuments();
-    const activeRides = await Ride.countDocuments({ status: "accepted" });
     const completedRides = await Ride.countDocuments({ status: "completed" });
-    
-    // السائقين المتصلين حالياً
     const onlineDriversCount = onlineDrivers.size;
     
     res.json({
-      totalUsers: totalUsers,
-      customers: customers,
-      drivers: drivers,
-      totalRides: totalRides,
-      activeRides: activeRides,
-      completedRides: completedRides,
+      totalUsers,
+      customers,
+      drivers,
+      totalRides,
+      completedRides,
       onlineDrivers: onlineDriversCount
     });
   } catch (err) {
@@ -159,9 +111,7 @@ app.get("/api/admin/stats", checkAdmin, async (req, res) => {
 // ═══ قائمة المستخدمين ═══
 app.get("/api/admin/users", checkAdmin, async (req, res) => {
   try {
-    const users = await User.find({})
-      .select("-password")
-      .sort({ createdAt: -1 });
+    const users = await User.find({}).select("-password").sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -172,16 +122,10 @@ app.get("/api/admin/users", checkAdmin, async (req, res) => {
 app.delete("/api/admin/users/:id", checkAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
-    
-    // احذف المستخدم
     await User.findByIdAndDelete(userId);
-    
-    // احذف رحلاته
     await Ride.deleteMany({ customer: userId });
     await Ride.deleteMany({ driver: userId });
-    
     console.log(`🗑️ حذف مستخدم: ${userId}`);
-    
     res.json({ success: true, message: "تم حذف المستخدم" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -210,17 +154,62 @@ app.get("/api/admin/online-drivers", checkAdmin, async (req, res) => {
   }
 });
 
-// ═══ حذف كل البيانات (للاختبار) ═══
+// ═══ قائمة المحظورين ═══
+app.get("/api/admin/blocked-devices", checkAdmin, async (req, res) => {
+  try {
+    const blocked = await BlockedDevice.find({}).sort({ blockedAt: -1 });
+    res.json(blocked);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ حظر جهاز ═══
+app.post("/api/admin/block-device", checkAdmin, async (req, res) => {
+  try {
+    const { deviceId, phone, reason } = req.body;
+    if (!deviceId) return res.status(400).json({ error: "deviceId مطلوب" });
+    
+    const exists = await BlockedDevice.findOne({ deviceId });
+    if (exists) return res.json({ success: true, message: "محظور بالفعل" });
+    
+    await BlockedDevice.create({
+      deviceId,
+      phone: phone || "",
+      reason: reason || "حظر إداري"
+    });
+    
+    console.log(`🚫 حظر جهاز: ${deviceId.substring(0, 16)}...`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ فك الحظر ═══
+app.delete("/api/admin/block-device/:deviceId", checkAdmin, async (req, res) => {
+  try {
+    await BlockedDevice.deleteOne({ deviceId: req.params.deviceId });
+    console.log(`✅ فك حظر: ${req.params.deviceId.substring(0, 16)}...`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══ حذف كل البيانات ═══
 app.delete("/api/admin/reset", checkAdmin, async (req, res) => {
   try {
     await User.deleteMany({});
     await Ride.deleteMany({});
+    await BlockedDevice.deleteMany({});
     console.log("🗑️ تم مسح كل البيانات");
     res.json({ success: true, message: "تم مسح كل البيانات" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ═══════════════════════════════════════════════════════════
 // 🗺️ Geoapify Places API Proxy
 // ═══════════════════════════════════════════════════════════
@@ -229,79 +218,52 @@ app.get("/api/pois", async (req, res) => {
   
   try {
     const { south, west, north, east, zoom } = req.query;
-    
     if (!south || !west || !north || !east) {
       return res.status(400).json({ error: "Missing bounds" });
     }
     
-   const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
-if (!GEOAPIFY_KEY) {
-  console.error("❌ GEOAPIFY_KEY not configured in Environment!");
-  return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
-}
+    const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
+    if (!GEOAPIFY_KEY) {
+      console.error("❌ GEOAPIFY_KEY not configured");
+      return res.status(500).json({ error: "GEOAPIFY_KEY not configured" });
+    }
     
-    // ═══ Cache Check ═══
     const cacheKey = `pois_${south}_${west}_${north}_${east}`;
     const cached = poiCache.get(cacheKey);
-    
     if (cached && Date.now() - cached.time < POI_CACHE_TTL) {
-      console.log("📦 POIs from server cache");
       return res.json(cached.data);
     }
     
-    // ═══ عدد النتائج حسب Zoom ═══
     let limit = 50;
     if (zoom >= 16) limit = 100;
     if (zoom >= 17) limit = 200;
     
-    // ═══ Geoapify Categories ═══
     const categories = [
-      "catering.restaurant",
-      "catering.cafe",
-      "catering.fast_food",
-      "healthcare.hospital",
-      "healthcare.pharmacy",
-      "service.vehicle.fuel",
-      "service.financial.bank",
-      "service.financial.atm",
-      "service.police",
-      "accommodation.hotel",
-      "accommodation.hostel",
-      "accommodation.guest_house"
+      "catering.restaurant", "catering.cafe", "catering.fast_food",
+      "healthcare.hospital", "healthcare.pharmacy", "service.vehicle.fuel",
+      "service.financial.bank", "service.financial.atm", "service.police",
+      "accommodation.hotel", "accommodation.hostel", "accommodation.guest_house"
     ].join(",");
     
-    // ═══ Geoapify URL ═══
     const url = "https://api.geoapify.com/v2/places?" +
       "categories=" + encodeURIComponent(categories) +
       "&filter=rect:" + west + "," + south + "," + east + "," + north +
       "&limit=" + limit +
       "&apiKey=" + GEOAPIFY_KEY;
     
-    console.log("📡 Geoapify request...");
-    
     const response = await fetch(url);
-    
     if (!response.ok) {
       const errText = await response.text();
       console.error("❌ Geoapify HTTP", response.status, errText.substring(0, 200));
-      return res.status(500).json({ 
-        error: "Geoapify returned " + response.status 
-      });
+      return res.status(500).json({ error: "Geoapify returned " + response.status });
     }
     
     const data = await response.json();
+    if (!data.features) return res.json({ elements: [] });
     
-    if (!data.features) {
-      console.log("⚠️ No features");
-      return res.json({ elements: [] });
-    }
-    
-    // ═══ تحويل Geoapify → Overpass format (للتوافق مع الكود القديم) ═══
     const elements = data.features.map(f => {
       const props = f.properties;
       const geom = f.geometry;
-      
-      // فك تشفير category
       let type = "📍";
       const cat = props.categories?.[0] || "";
       
@@ -328,15 +290,9 @@ if (!GEOAPIFY_KEY) {
       };
     });
     
-    const result = { elements: elements };
+    const result = { elements };
+    poiCache.set(cacheKey, { data: result, time: Date.now() });
     
-    // ═══ Cache ═══
-    poiCache.set(cacheKey, { 
-      data: result, 
-      time: Date.now() 
-    });
-    
-    // نظّف cache القديم
     if (poiCache.size > POI_CACHE_MAX_SIZE) {
       const oldestKeys = [...poiCache.keys()].slice(0, 100);
       oldestKeys.forEach(k => poiCache.delete(k));
@@ -344,7 +300,6 @@ if (!GEOAPIFY_KEY) {
     
     const duration = Date.now() - startTime;
     console.log(`✅ Geoapify: ${elements.length} POIs in ${duration}ms`);
-    
     res.json(result);
     
   } catch (err) {
@@ -359,22 +314,17 @@ if (!GEOAPIFY_KEY) {
 app.get("/api/search", async (req, res) => {
   try {
     const query = req.query.q;
-    if (!query || query.length < 3) {
-      return res.json([]);
-    }
+    if (!query || query.length < 3) return res.json([]);
     
     const url = "https://nominatim.openstreetmap.org/search?" +
       "format=json&q=" + encodeURIComponent(query) +
       "&countrycodes=lb&limit=8&addressdetails=1&accept-language=ar";
     
     const response = await fetch(url, {
-      headers: {
-        "User-Agent": "TaxiBaalbek/1.0 (contact@taxi-baalbek.onrender.com)"
-      }
+      headers: { "User-Agent": "TaxiBaalbek/1.0 (contact@taxi-baalbek.onrender.com)" }
     });
     
     const data = await response.json();
-    
     const results = data.map(item => ({
       name: item.display_name.split(",")[0],
       fullName: item.display_name,
@@ -388,12 +338,14 @@ app.get("/api/search", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ═══ صفحة التثبيت ═══
 app.get("/install", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "install.html"));
 });
+
 // ═══════════════════════════════════════════════════════════
-// 📚 Routes
+// 📚 API Routes
 // ═══════════════════════════════════════════════════════════
 app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
@@ -411,9 +363,7 @@ mongoose.connect(process.env.MONGO_URI, {
   socketTimeoutMS: 45000,
 })
   .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch(err => {
-    console.error("❌ MongoDB connection FAILED:", err.message);
-  });
+  .catch(err => console.error("❌ MongoDB connection FAILED:", err.message));
 
 // ═══════════════════════════════════════════════════════════
 // ⚙️ Settings
@@ -422,13 +372,6 @@ const SEARCH_RADIUS_KM = parseFloat(process.env.SEARCH_RADIUS_KM) || 10;
 const SEND_TO_NEAREST_ONLY = process.env.SEND_TO_NEAREST_ONLY === "true";
 const FALLBACK_TO_ALL = process.env.FALLBACK_TO_ALL === "true";
 const AVG_SPEED_KMH = 30;
-
-// ═══════════════════════════════════════════════════════════
-// 💾 In-Memory Storage
-// ═══════════════════════════════════════════════════════════
-const onlineDrivers = new Map();
-const pendingRides = new Map();
-const activeRides = new Map();
 
 // ═══════════════════════════════════════════════════════════
 // 🛠️ Helper Functions
@@ -524,10 +467,7 @@ function startSearchLoop(rideId) {
 
   const interval = setInterval(async () => {
     const pending = pendingRides.get(rideId);
-    if (!pending) {
-      clearInterval(interval);
-      return;
-    }
+    if (!pending) { clearInterval(interval); return; }
 
     const dbRide = await Ride.findById(rideId);
     if (!dbRide || dbRide.status !== "pending") {
@@ -548,15 +488,10 @@ function startSearchLoop(rideId) {
 io.on("connection", (socket) => {
   console.log("🔌 connected:", socket.id);
 
-  // ═══ السائق يتصل ═══
   socket.on("driver-online", ({ driverId, name, carModel, carPlate, lat, lng }) => {
     onlineDrivers.set(driverId, {
       socketId: socket.id,
-      name,
-      carModel,
-      carPlate,
-      lat,
-      lng,
+      name, carModel, carPlate, lat, lng,
       busy: false,
       lastUpdate: Date.now()
     });
@@ -565,7 +500,6 @@ io.on("connection", (socket) => {
     console.log(`🚗 سائق متصل: ${name}`);
     io.emit("drivers-list-update", getDriversPublicList());
 
-    // أرسل الطلبات المعلقة
     for (const [, pending] of pendingRides.entries()) {
       const dist = calculateDistance(pending.ride.from.lat, pending.ride.from.lng, lat, lng);
       if (dist <= SEARCH_RADIUS_KM * 2) {
@@ -578,7 +512,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ═══ تحديث موقع السائق ═══
   socket.on("driver-location", ({ driverId, lat, lng }) => {
     const d = onlineDrivers.get(driverId);
     if (!d) return;
@@ -588,36 +521,23 @@ io.on("connection", (socket) => {
     d.lastUpdate = Date.now();
     io.emit("driver-location-update", { driverId, lat, lng });
 
-    // حدّث ETA للرحلات النشطة
     for (const [rideId, active] of activeRides.entries()) {
       if (active.driverId !== driverId) continue;
-
       const dist = calculateDistance(lat, lng, active.fromLat, active.fromLng);
       const eta = Math.max(1, Math.round((dist / AVG_SPEED_KMH) * 60));
 
       if (active.customerSocketId) {
-        io.to(active.customerSocketId).emit("eta-update", {
-          rideId,
-          etaMin: eta,
-          distanceKm: dist.toFixed(2)
-        });
+        io.to(active.customerSocketId).emit("eta-update", { rideId, etaMin: eta, distanceKm: dist.toFixed(2) });
       }
-
-      io.to(active.driverSocketId).emit("eta-update", {
-        rideId,
-        etaMin: eta,
-        distanceKm: dist.toFixed(2)
-      });
+      io.to(active.driverSocketId).emit("eta-update", { rideId, etaMin: eta, distanceKm: dist.toFixed(2) });
     }
   });
 
-  // ═══ السائق يغلق الاستقبال ═══
   socket.on("driver-offline", ({ driverId }) => {
     onlineDrivers.delete(driverId);
     io.emit("drivers-list-update", getDriversPublicList());
   });
 
-  // ═══ الزبون يطلب رحلة ═══
   socket.on("new-ride", (ride) => {
     console.log(`🆕 رحلة جديدة: ${ride._id}`);
     pendingRides.set(ride._id, {
@@ -635,10 +555,8 @@ io.on("connection", (socket) => {
     startSearchLoop(ride._id);
   });
 
-  // ═══ السائق يقبل الرحلة ═══
   socket.on("accept-ride", async ({ rideId, driverId }) => {
     console.log(`✅ السائق ${driverId} يقبل ${rideId}`);
-
     const dbRide = await Ride.findById(rideId);
     if (!dbRide || dbRide.status !== "pending") {
       socket.emit("ride-unavailable", { rideId });
@@ -656,8 +574,6 @@ io.on("connection", (socket) => {
       distKm = calculateDistance(driverInfo.lat, driverInfo.lng, dbRide.from.lat, dbRide.from.lng);
       etaMin = Math.max(1, Math.round((distKm / AVG_SPEED_KMH) * 60));
     }
-
-    console.log(`📏 المسافة: ${distKm.toFixed(2)} كم — ETA: ${etaMin} دقيقة`);
 
     const updatedRide = await Ride.findByIdAndUpdate(
       rideId,
@@ -688,22 +604,14 @@ io.on("connection", (socket) => {
       startedAt: Date.now()
     });
 
-    // أبلغ السائق
-    socket.emit("ride-confirmed", {
-      rideId,
-      ride: updatedRide,
-      etaMin,
-      distanceKm: distKm.toFixed(2)
-    });
+    socket.emit("ride-confirmed", { rideId, ride: updatedRide, etaMin, distanceKm: distKm.toFixed(2) });
 
-    // أبلغ باقي السائقين
     for (const [otherDriverId, info] of onlineDrivers.entries()) {
       if (otherDriverId !== driverId) {
         io.to(info.socketId).emit("ride-removed", { rideId });
       }
     }
 
-    // أبلغ الزبون
     if (customerSocketId) {
       io.to(customerSocketId).emit("ride-accepted", {
         rideId,
@@ -717,7 +625,6 @@ io.on("connection", (socket) => {
     io.emit("drivers-list-update", getDriversPublicList());
   });
 
-  // ═══ إلغاء الرحلة ═══
   socket.on("cancel-ride", async ({ rideId, cancelledBy }) => {
     console.log(`❌ إلغاء ${rideId} بواسطة ${cancelledBy}`);
 
@@ -743,7 +650,6 @@ io.on("connection", (socket) => {
       if (d) d.busy = false;
     }
 
-    // الزبون ألغى — أبلغ السائق
     if (cancelledBy === "customer") {
       if (active && active.driverSocketId) {
         io.to(active.driverSocketId).emit("customer-cancelled", { rideId });
@@ -753,7 +659,6 @@ io.on("connection", (socket) => {
       }
     }
 
-    // السائق ألغى — أعد البحث
     if (cancelledBy === "driver" && customerSocketId) {
       const ride = await Ride.findById(rideId).populate("customer", "name phone");
       if (ride) {
@@ -763,54 +668,42 @@ io.on("connection", (socket) => {
           customerSocketId,
           interval: null
         });
-
         io.to(customerSocketId).emit("search-restarted", {
           rideId,
           message: "🔄 السائق ألغى — جاري البحث عن سائق آخر..."
         });
-
         startSearchLoop(rideId);
       }
     }
 
     io.emit("drivers-list-update", getDriversPublicList());
   });
-  // ═══ السائق وصل لموقع الزبون ═══
+
   socket.on("driver-arrived", async ({ rideId, driverId }) => {
     console.log(`📍 السائق ${driverId} وصل للرحلة ${rideId}`);
-    
     const active = activeRides.get(rideId);
     if (!active) return;
-    
-    // ⚠️ أبلغ الزبون
+
     if (active.customerSocketId) {
-      io.to(active.customerSocketId).emit("driver-arrived", {
-        rideId,
-        driverId
-      });
+      io.to(active.customerSocketId).emit("driver-arrived", { rideId, driverId });
     }
-    
-    // ⚠️ حدّث حالة الرحلة في قاعدة البيانات
+
     await Ride.findByIdAndUpdate(rideId, {
       driverArrived: true,
       driverArrivedAt: new Date()
     }).catch(() => {});
   });
 
-  // ═══ إنهاء الرحلة ═══
   socket.on("ride-completed", async ({ driverId, rideId }) => {
     console.log(`🏁 ${driverId} أنهى ${rideId}`);
-
     const d = onlineDrivers.get(driverId);
     if (d) d.busy = false;
 
     await Ride.findByIdAndUpdate(rideId, { status: "completed" }).catch(() => {});
     activeRides.delete(rideId);
-
     io.emit("drivers-list-update", getDriversPublicList());
   });
 
-  // ═══ انقطاع الاتصال ═══
   socket.on("disconnect", () => {
     if (socket.driverId) {
       onlineDrivers.delete(socket.driverId);
@@ -821,7 +714,7 @@ io.on("connection", (socket) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// 🧹 Cleanup: إزالة السائقين غير النشطين
+// 🧹 Cleanup
 // ═══════════════════════════════════════════════════════════
 setInterval(() => {
   const now = Date.now();
@@ -839,4 +732,5 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🔐 Admin password: ${ADMIN_PASSWORD === "admin2026" ? "admin2026 (default)" : "custom"}`);
 });
