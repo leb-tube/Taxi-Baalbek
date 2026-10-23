@@ -71,8 +71,8 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
   </div>
   
   <div class="admin-tabs">
-    <button class="admin-tab active" onclick="showTab('users')">👥 المستخدمين</button>
-    <button class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
+    <button id="btn-tab-users" class="admin-tab active" onclick="showTab('users')">👥 المستخدمين</button>
+    <button id="btn-tab-blocked" class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
   </div>
   
   <!-- تبويب المستخدمين -->
@@ -147,12 +147,12 @@ async function refreshStats() {
     const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { "x-admin-password": ADMIN_PASSWORD } });
     if (!res.ok) return;
     const data = await res.json();
-    document.getElementById("stat-total").textContent = data.totalUsers;
-    document.getElementById("stat-customers").textContent = data.customers;
-    document.getElementById("stat-drivers").textContent = data.drivers;
-    document.getElementById("stat-online").textContent = data.onlineDrivers;
-    document.getElementById("stat-rides").textContent = data.totalRides;
-    document.getElementById("stat-completed").textContent = data.completedRides;
+    document.getElementById("stat-total").textContent = data.totalUsers || 0;
+    document.getElementById("stat-customers").textContent = data.customers || 0;
+    document.getElementById("stat-drivers").textContent = data.drivers || 0;
+    document.getElementById("stat-online").textContent = data.onlineDrivers || 0;
+    document.getElementById("stat-rides").textContent = data.totalRides || 0;
+    document.getElementById("stat-completed").textContent = data.completedRides || 0;
   } catch (err) { console.error(err); }
 }
 
@@ -169,7 +169,7 @@ function renderUsers() {
   const search = document.getElementById("search-input").value.toLowerCase();
   const roleFilter = document.getElementById("role-filter").value;
   let filtered = allUsers.filter(u => {
-    const matchSearch = !search || u.name.toLowerCase().includes(search) || u.phone.includes(search);
+    const matchSearch = !search || (u.name && u.name.toLowerCase().includes(search)) || (u.phone && u.phone.includes(search));
     const matchRole = roleFilter === "all" || u.role === roleFilter;
     return matchSearch && matchRole;
   });
@@ -180,16 +180,16 @@ function renderUsers() {
     return;
   }
   tbody.innerHTML = filtered.map(u => {
-    const date = new Date(u.createdAt).toLocaleDateString("ar-LB");
+    const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString("ar-LB") : "-";
     const roleBadge = u.role === "customer" ? '<span class="badge customer">🧍 زبون</span>' : '<span class="badge driver">🚗 سائق</span>';
     return '<tr>' +
-      '<td><b>' + u.name + '</b></td>' +
-      '<td>' + u.phone + '</td>' +
+      '<td><b>' + (u.name || "-") + '</b></td>' +
+      '<td>' + (u.phone || "-") + '</td>' +
       '<td>' + roleBadge + '</td>' +
       '<td>' + (u.carModel || "-") + '</td>' +
       '<td>' + (u.carPlate || "-") + '</td>' +
       '<td>' + date + '</td>' +
-      '<td><button class="delete-btn" onclick="deleteUser(\'' + u._id + '\', \'' + u.name + '\', \'' + (u.deviceId || '') + '\', \'' + u.phone + '\')">🗑️ حذف وحظر</button></td>' +
+      '<td><button class="delete-btn" onclick="deleteUser('' + u._id + '', '' + (u.name || '-') + '', '' + (u.deviceId || '') + '', '' + (u.phone || '') + '')">🗑️ حذف وحظر</button></td>' +
     '</tr>';
   }).join("");
 }
@@ -235,9 +235,9 @@ async function refreshBlockedDevices() {
       return;
     }
     tbody.innerHTML = blocked.map(b => {
-      const date = new Date(b.blockedAt).toLocaleDateString("ar-LB");
+      const date = b.blockedAt ? new Date(b.blockedAt).toLocaleDateString("ar-LB") : "-";
       const short = b.deviceId.startsWith("phone_") ? "📱 " + b.deviceId.replace("phone_", "") : b.deviceId.substring(0, 16) + "...";
-      return '<tr><td><code style="font-size:11px">' + short + '</code></td><td>' + (b.phone || "-") + '</td><td>' + (b.reason || "-") + '</td><td>' + date + '</td><td><button class="delete-btn" style="background:#28a745" onclick="unblockDevice(\'' + b.deviceId + '\')">✅ فك الحظر</button></td></tr>';
+      return '<tr><td><code style="font-size:11px">' + short + '</code></td><td>' + (b.phone || "-") + '</td><td>' + (b.reason || "-") + '</td><td>' + date + '</td><td><button class="delete-btn" style="background:#28a745" onclick="unblockDevice('' + b.deviceId + '')">✅ فك الحظر</button></td></tr>';
     }).join("");
   } catch (err) { console.error(err); }
 }
@@ -261,11 +261,19 @@ async function refreshAll() {
 
 function showTab(tab) {
   document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
-  event.target.classList.add("active");
+  
+  if (tab === "users") {
+    document.getElementById("btn-tab-users").classList.add("active");
+  } else {
+    document.getElementById("btn-tab-blocked").classList.add("active");
+  }
+
   document.getElementById("tab-users").classList.add("hidden");
   document.getElementById("tab-blocked").classList.add("hidden");
-  if (tab === "users") document.getElementById("tab-users").classList.remove("hidden");
-  else if (tab === "blocked") {
+  
+  if (tab === "users") {
+    document.getElementById("tab-users").classList.remove("hidden");
+  } else if (tab === "blocked") {
     document.getElementById("tab-blocked").classList.remove("hidden");
     refreshBlockedDevices();
   }
