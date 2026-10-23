@@ -4,214 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة الإدارة - Taxi Lebanon</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
-
-/* ═══ شاشة الدخول ═══ */
-#login-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
-}
-.login-box {
-  background: #fff;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.1);
-  width: 100%;
-  max-width: 400px;
-}
-.login-box h1 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #111;
-}
-.login-box input {
-  width: 100%;
-  padding: 14px;
-  margin-bottom: 15px;
-  border: 2px solid #ddd;
-  border-radius: 10px;
-  font-size: 16px;
-}
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.1); width: 100%; max-width: 400px; }
+.login-box h1 { text-align: center; margin-bottom: 20px; color: #111; }
+.login-box input { width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
 .login-box input:focus { outline: none; border-color: #ffc107; }
-.login-box button {
-  width: 100%;
-  padding: 14px;
-  background: #ffc107;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-}
-.login-box button:hover { background: #ffb300; }
+.login-box button { width: 100%; padding: 14px; background: #ffc107; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
 .error { color: #e74c3c; text-align: center; margin-top: 10px; }
-
-/* ═══ لوحة التحكم ═══ */
 #admin-screen { display: none; padding: 20px; }
 #admin-screen.active { display: block; }
-
-.admin-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #111;
-  color: #fff;
-  border-radius: 12px;
-}
+.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 20px; background: #111; color: #fff; border-radius: 12px; }
 .admin-header h1 { font-size: 22px; }
-.admin-header button {
-  background: #dc3545;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-/* ═══ الإحصائيات ═══ */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-.stat-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
-  border-left: 5px solid #ffc107;
-}
+.admin-header button { background: #dc3545; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.05); border-left: 5px solid #ffc107; }
 .stat-card .label { color: #666; font-size: 14px; margin-bottom: 8px; }
 .stat-card .value { font-size: 32px; font-weight: bold; color: #111; }
-
-/* ═══ التبويبات ═══ */
-.admin-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.admin-tab {
-  padding: 12px 20px;
-  background: #fff;
-  border: 2px solid #ddd;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 15px;
-}
-.admin-tab.active {
-  background: #ffc107;
-  border-color: #ffc107;
-}
-
-/* ═══ قسم المستخدمين ═══ */
-.users-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
-}
-.users-section h2 {
-  margin-bottom: 15px;
-  font-size: 20px;
-}
-
-.filter-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-}
-.filter-bar input, .filter-bar select {
-  padding: 10px 15px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: Tahoma;
-}
+.admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.admin-tab { padding: 12px 20px; background: #fff; border: 2px solid #ddd; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 15px; }
+.admin-tab.active { background: #ffc107; border-color: #ffc107; }
+.users-section { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.users-section h2 { margin-bottom: 15px; font-size: 20px; }
+.filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+.filter-bar input, .filter-bar select { padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Tahoma; }
 .filter-bar input { flex: 1; min-width: 200px; }
-.filter-bar input:focus, .filter-bar select:focus {
-  outline: none;
-  border-color: #ffc107;
-}
-
-/* ═══ جدول المستخدمين ═══ */
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.users-table th, .users-table td {
-  padding: 12px;
-  text-align: right;
-  border-bottom: 1px solid #eee;
-}
-.users-table th {
-  background: #f8f9fa;
-  font-weight: bold;
-  color: #333;
-}
+.filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: #ffc107; }
+.users-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.users-table th, .users-table td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; }
+.users-table th { background: #f8f9fa; font-weight: bold; color: #333; }
 .users-table tr:hover { background: #fffbea; }
-.users-table .badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-}
+.users-table .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
 .badge.customer { background: #d1ecf1; color: #0c5460; }
 .badge.driver { background: #d4edda; color: #155724; }
-
-.delete-btn {
-  background: #dc3545;
-  color: #fff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-.delete-btn:hover { background: #c82333; }
-
-/* ═══ خريطة السائقين ═══ */
-#drivers-map {
-  height: 70vh;
-  width: 100%;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.1);
-}
-.map-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-}
-
+.delete-btn { background: #dc3545; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .hidden { display: none !important; }
-
-.info-bar {
-  background: #fffbea;
-  border: 2px solid #ffc107;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
+.info-bar { background: #fffbea; border: 2px solid #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
 </style>
 </head>
 <body>
 
-<!-- ═══ شاشة الدخول ═══ -->
 <div id="login-screen">
   <div class="login-box">
     <h1>🔐 لوحة الإدارة</h1>
@@ -221,53 +55,29 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
   </div>
 </div>
 
-<!-- ═══ لوحة التحكم ═══ -->
 <div id="admin-screen">
   <div class="admin-header">
     <h1>🚕 Taxi Lebanon — لوحة الإدارة</h1>
     <button onclick="logoutAdmin()">خروج</button>
   </div>
   
-  <!-- الإحصائيات -->
-  <div class="stats" id="stats">
-    <div class="stat-card">
-      <div class="label">📊 إجمالي المستخدمين</div>
-      <div class="value" id="stat-total">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">🧍 الزبائن</div>
-      <div class="value" id="stat-customers">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">🚗 السائقين</div>
-      <div class="value" id="stat-drivers">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">🟢 السائقين المتصلين</div>
-      <div class="value" id="stat-online">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">📋 إجمالي الرحلات</div>
-      <div class="value" id="stat-rides">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">✅ الرحلات المكتملة</div>
-      <div class="value" id="stat-completed">0</div>
-    </div>
+  <div class="stats">
+    <div class="stat-card"><div class="label">📊 إجمالي المستخدمين</div><div class="value" id="stat-total">0</div></div>
+    <div class="stat-card"><div class="label">🧍 الزبائن</div><div class="value" id="stat-customers">0</div></div>
+    <div class="stat-card"><div class="label">🚗 السائقين</div><div class="value" id="stat-drivers">0</div></div>
+    <div class="stat-card"><div class="label">🟢 السائقين المتصلين</div><div class="value" id="stat-online">0</div></div>
+    <div class="stat-card"><div class="label">📋 إجمالي الرحلات</div><div class="value" id="stat-rides">0</div></div>
+    <div class="stat-card"><div class="label">✅ الرحلات المكتملة</div><div class="value" id="stat-completed">0</div></div>
   </div>
   
-  <!-- التبويبات -->
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="showTab('users')">👥 المستخدمين</button>
-    <button class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
-    <button class="admin-tab" onclick="showTab('map')">🗺️ خريطة السائقين</button>
     <button class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
   </div>
   
   <!-- تبويب المستخدمين -->
   <div id="tab-users" class="users-section">
     <h2>👥 قائمة المستخدمين</h2>
-    
     <div class="filter-bar">
       <input type="text" id="search-input" placeholder="🔍 ابحث بالاسم أو الهاتف..." oninput="filterUsers()">
       <select id="role-filter" onchange="filterUsers()">
@@ -277,23 +87,11 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
       </select>
       <button onclick="refreshAll()" style="background:#007bff;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:bold">🔄 تحديث</button>
     </div>
-    
-    <div class="info-bar">
-      ℹ️ عدد المستخدمين المعروضين: <b id="shown-count">0</b>
-    </div>
-    
+    <div class="info-bar">ℹ️ عدد المستخدمين المعروضين: <b id="shown-count">0</b></div>
     <div style="overflow-x:auto">
       <table class="users-table">
         <thead>
-          <tr>
-            <th>الاسم</th>
-            <th>الهاتف</th>
-            <th>النوع</th>
-            <th>السيارة</th>
-            <th>اللوحة</th>
-            <th>تاريخ التسجيل</th>
-            <th>إجراء</th>
-          </tr>
+          <tr><th>الاسم</th><th>الهاتف</th><th>النوع</th><th>السيارة</th><th>اللوحة</th><th>تاريخ التسجيل</th><th>إجراء</th></tr>
         </thead>
         <tbody id="users-list">
           <tr><td colspan="7" style="text-align:center;padding:20px;color:#999">⏳ جاري التحميل...</td></tr>
@@ -301,200 +99,105 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
       </table>
     </div>
   </div>
+  
   <!-- تبويب المحظورين -->
-<div id="tab-blocked" class="users-section hidden">
-  <h2>🚫 الأجهزة المحظورة</h2>
-  
-  <div class="info-bar" style="background:#f8d7da;border-color:#dc3545;color:#721c24">
-    ⚠️ الأجهزة المحظورة لا يمكنها التسجيل أو الدخول
-  </div>
-  
-  <div style="overflow-x:auto">
-    <table class="users-table">
-      <thead>
-        <tr>
-          <th>Device ID</th>
-          <th>رقم الهاتف</th>
-          <th>السبب</th>
-          <th>تاريخ الحظر</th>
-          <th>إجراء</th>
-        </tr>
-      </thead>
-      <tbody id="blocked-list">
-        <tr><td colspan="5" style="text-align:center;padding:20px;color:#999">⏳ جاري التحميل...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-<!-- تبويب المحظورين -->
-<div id="tab-blocked" class="users-section hidden">
-  <h2>🚫 الأجهزة المحظورة</h2>
-  <div style="overflow-x:auto">
-    <table class="users-table">
-      <thead>
-        <tr>
-          <th>Device ID</th>
-          <th>رقم الهاتف</th>
-          <th>السبب</th>
-          <th>تاريخ الحظر</th>
-          <th>إجراء</th>
-        </tr>
-      </thead>
-      <tbody id="blocked-list">
-        <tr><td colspan="5" style="text-align:center;padding:20px;color:#999">⏳ جاري التحميل...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-  <!-- تبويب الخريطة -->
-  <div id="tab-map" class="map-section hidden">
-    <h2>🗺️ مواقع السائقين المتصلين</h2>
-    <p style="color:#666;margin:10px 0">يتحدث تلقائياً كل 5 ثوان</p>
-    <div id="drivers-map"></div>
+  <div id="tab-blocked" class="users-section hidden">
+    <h2>🚫 الأجهزة المحظورة</h2>
+    <div class="info-bar" style="background:#f8d7da;border-color:#dc3545;color:#721c24">
+      ⚠️ الأجهزة المحظورة لا يمكنها التسجيل أو الدخول
+    </div>
+    <div style="overflow-x:auto">
+      <table class="users-table">
+        <thead>
+          <tr><th>Device ID</th><th>رقم الهاتف</th><th>السبب</th><th>تاريخ الحظر</th><th>إجراء</th></tr>
+        </thead>
+        <tbody id="blocked-list">
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:#999">⏳ جاري التحميل...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 const API_BASE = window.location.origin;
 let ADMIN_PASSWORD = "";
 let allUsers = [];
-let driversMap = null;
-let driverMarkers = {};
-let refreshInterval = null;
-let mapRefreshInterval = null;
 
-// ═══ تسجيل الدخول ═══
 async function loginAdmin() {
   const password = document.getElementById("admin-password").value;
   const errEl = document.getElementById("login-error");
   errEl.textContent = "";
-  
   try {
-    const res = await fetch(`${API_BASE}/api/admin/stats`, {
-      headers: { "x-admin-password": password }
-    });
-    
-    if (res.status === 401) {
-      errEl.textContent = "كلمة المرور خاطئة";
-      return;
-    }
-    
-    if (!res.ok) {
-      errEl.textContent = "خطأ في الاتصال";
-      return;
-    }
-    
+    const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { "x-admin-password": password } });
+    if (res.status === 401) { errEl.textContent = "كلمة المرور خاطئة"; return; }
+    if (!res.ok) { errEl.textContent = "خطأ في الاتصال"; return; }
     ADMIN_PASSWORD = password;
     sessionStorage.setItem("admin_pass", password);
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("admin-screen").classList.add("active");
-    
     await refreshAll();
-    
-    // ⚠️ تحديث تلقائي كل 15 ثانية
-    refreshInterval = setInterval(refreshStats, 15000);
-    
-  } catch (err) {
-    errEl.textContent = "خطأ في الاتصال";
-    console.error(err);
-  }
+  } catch (err) { errEl.textContent = "خطأ في الاتصال"; }
 }
 
-function logoutAdmin() {
-  sessionStorage.removeItem("admin_pass");
-  ADMIN_PASSWORD = "";
-  location.reload();
-}
+function logoutAdmin() { sessionStorage.removeItem("admin_pass"); ADMIN_PASSWORD = ""; location.reload(); }
 
-// ═══ جلب الإحصائيات ═══
 async function refreshStats() {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/stats`, {
-      headers: { "x-admin-password": ADMIN_PASSWORD }
-    });
-    
+    const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { "x-admin-password": ADMIN_PASSWORD } });
     if (!res.ok) return;
     const data = await res.json();
-    
     document.getElementById("stat-total").textContent = data.totalUsers;
     document.getElementById("stat-customers").textContent = data.customers;
     document.getElementById("stat-drivers").textContent = data.drivers;
     document.getElementById("stat-online").textContent = data.onlineDrivers;
     document.getElementById("stat-rides").textContent = data.totalRides;
     document.getElementById("stat-completed").textContent = data.completedRides;
-    
-    console.log("📊 Stats updated:", data);
-  } catch (err) {
-    console.error("Stats error:", err);
-  }
+  } catch (err) { console.error(err); }
 }
 
-// ═══ جلب المستخدمين ═══
 async function refreshUsers() {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users`, {
-      headers: { "x-admin-password": ADMIN_PASSWORD }
-    });
-    
+    const res = await fetch(`${API_BASE}/api/admin/users`, { headers: { "x-admin-password": ADMIN_PASSWORD } });
     if (!res.ok) return;
     allUsers = await res.json();
     renderUsers();
-  } catch (err) {
-    console.error("Users error:", err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 function renderUsers() {
   const search = document.getElementById("search-input").value.toLowerCase();
   const roleFilter = document.getElementById("role-filter").value;
-  
   let filtered = allUsers.filter(u => {
-    const matchSearch = !search || 
-      u.name.toLowerCase().includes(search) || 
-      u.phone.includes(search);
+    const matchSearch = !search || u.name.toLowerCase().includes(search) || u.phone.includes(search);
     const matchRole = roleFilter === "all" || u.role === roleFilter;
     return matchSearch && matchRole;
   });
-  
   document.getElementById("shown-count").textContent = filtered.length;
-  
   const tbody = document.getElementById("users-list");
-  
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">لا يوجد مستخدمون</td></tr>';
     return;
   }
-  
   tbody.innerHTML = filtered.map(u => {
     const date = new Date(u.createdAt).toLocaleDateString("ar-LB");
-    const roleBadge = u.role === "customer" 
-      ? '<span class="badge customer">🧍 زبون</span>'
-      : '<span class="badge driver">🚗 سائق</span>';
-    
-    return `
-      <tr>
-        <td><b>${u.name}</b></td>
-        <td>${u.phone}</td>
-        <td>${roleBadge}</td>
-        <td>${u.carModel || "-"}</td>
-        <td>${u.carPlate || "-"}</td>
-        <td>${date}</td>
-        <td>
-       <button class="delete-btn" onclick="deleteUser('${u._id}', '${u.name}', '${u.deviceId || ''}', '${u.phone}')">🗑️ حذف وحظر</button>
-        </td>
-      </tr>
-    `;
+    const roleBadge = u.role === "customer" ? '<span class="badge customer">🧍 زبون</span>' : '<span class="badge driver">🚗 سائق</span>';
+    return '<tr>' +
+      '<td><b>' + u.name + '</b></td>' +
+      '<td>' + u.phone + '</td>' +
+      '<td>' + roleBadge + '</td>' +
+      '<td>' + (u.carModel || "-") + '</td>' +
+      '<td>' + (u.carPlate || "-") + '</td>' +
+      '<td>' + date + '</td>' +
+      '<td><button class="delete-btn" onclick="deleteUser(\'' + u._id + '\', \'' + u.name + '\', \'' + (u.deviceId || '') + '\', \'' + u.phone + '\')">🗑️ حذف وحظر</button></td>' +
+    '</tr>';
   }).join("");
 }
 
-function filterUsers() {
-  renderUsers();
-}
+function filterUsers() { renderUsers(); }
 
-// ═══ حذف مستخدم ═══
 async function deleteUser(userId, userName, deviceId, phone) {
-  if (!confirm(`هل تريد حذف "${userName}"؟\n\n⚠️ سيتم:\n- حظر الجهاز\n- حظر رقم الهاتف\n- حذف الحساب\n- حذف كل رحلاته`)) return;
+  if (!confirm('هل تريد حذف "' + userName + '"؟\n\n⚠️ سيتم:\n- حظر الجهاز\n- حظر رقم الهاتف\n- حذف الحساب\n- حذف كل رحلاته')) return;
   
   try {
     if (deviceId) {
@@ -504,7 +207,6 @@ async function deleteUser(userId, userName, deviceId, phone) {
         body: JSON.stringify({ deviceId: deviceId, phone: phone, reason: "حذف الحساب" })
       });
     }
-    
     if (phone) {
       await fetch(`${API_BASE}/api/admin/block-device`, {
         method: "POST",
@@ -512,177 +214,19 @@ async function deleteUser(userId, userName, deviceId, phone) {
         body: JSON.stringify({ deviceId: "phone_" + phone, phone: phone, reason: "حذف الحساب" })
       });
     }
-    
     const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
       method: "DELETE",
       headers: { "x-admin-password": ADMIN_PASSWORD }
     });
-    
     if (!res.ok) { alert("❌ فشل الحذف"); return; }
-    
-    alert(`✅ تم حذف ${userName} وحظر جهازه`);
+    alert("✅ تم حذف " + userName + " وحظر جهازه");
     await refreshAll();
-  } catch (err) {
-    console.error(err);
-    alert("❌ خطأ");
-  }
-}
-    
-    // ═══ 2. احظر رقم الهاتف أيضاً ═══
-    if (phone) {
-      await fetch(`${API_BASE}/api/admin/block-device`, {
-        method: "POST",
-        headers: { 
-          "x-admin-password": ADMIN_PASSWORD,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          deviceId: "phone_" + phone,
-          phone: phone,
-          reason: "حذف الحساب"
-        })
-      });
-    }
-    
-    // ═══ 3. احذف المستخدم ═══
-    const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-      method: "DELETE",
-      headers: { "x-admin-password": ADMIN_PASSWORD }
-    });
-    
-    if (!res.ok) {
-      alert("❌ فشل الحذف");
-      return;
-    }
-    
-    alert(`✅ تم حذف ${userName} وحظر جهازه`);
-    await refreshAll();
-    
-  } catch (err) {
-    console.error(err);
-    alert("❌ خطأ في الاتصال");
-  }
+  } catch (err) { alert("❌ خطأ"); }
 }
 
-// ═══ تحديث الكل ═══
-async function refreshAll() {
-  await refreshStats();
-  await refreshUsers();
-  if (typeof refreshBlockedDevices === "function") await refreshBlockedDevices();
-}
-
-// ═══ التبويبات ═══
-function showTab(tab) {
-  document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
-  event.target.classList.add("active");
-  
-  document.getElementById("tab-users").classList.add("hidden");
-  document.getElementById("tab-map").classList.add("hidden");
-  document.getElementById("tab-blocked").classList.add("hidden");
-  
-  if (mapRefreshInterval) { clearInterval(mapRefreshInterval); mapRefreshInterval = null; }
-  
-  if (tab === "users") {
-    document.getElementById("tab-users").classList.remove("hidden");
-  } else if (tab === "map") {
-    document.getElementById("tab-map").classList.remove("hidden");
-    initDriversMap();
-    loadDriversOnMap();
-    mapRefreshInterval = setInterval(loadDriversOnMap, 5000);
-  } else if (tab === "blocked") {
-    document.getElementById("tab-blocked").classList.remove("hidden");
-    refreshBlockedDevices();
-  }
-}
-
-// ═══ خريطة السائقين ═══
-function initDriversMap() {
-  if (driversMap) {
-    setTimeout(() => driversMap.invalidateSize(), 100);
-    return;
-  }
-  
-  driversMap = L.map("drivers-map").setView([33.8547, 35.8623], 10);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(driversMap);
-  
-  setTimeout(() => driversMap.invalidateSize(), 100);
-}
-
-async function loadDriversOnMap() {
-  try {
-    const res = await fetch(`${API_BASE}/api/admin/online-drivers`, {
-      headers: { "x-admin-password": ADMIN_PASSWORD }
-    });
-    
-    if (!res.ok) return;
-    const drivers = await res.json();
-    
-    // احذف السائقين الذين خرجوا
-    const currentIds = new Set(drivers.map(d => d.id));
-    for (const id in driverMarkers) {
-      if (!currentIds.has(id)) {
-        driverMarkers[id].remove();
-        delete driverMarkers[id];
-      }
-    }
-    
-    // أضف/حدّث
-    drivers.forEach(d => {
-      const color = d.busy ? "#dc3545" : "#28a745";
-      const statusText = d.busy ? "مشغول" : "متاح";
-      
-      const icon = L.divIcon({
-        html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;box-shadow:0 0 12px ' + color + '">🚗</div>',
-        className: "",
-        iconSize: [44, 44],
-        iconAnchor: [22, 22]
-      });
-      
-      const popupContent = '<b>🚗 ' + d.name + '</b><br>' +
-        'السيارة: ' + d.carModel + '<br>' +
-        'اللوحة: ' + d.carPlate + '<br>' +
-        '<span style="color:' + color + ';font-weight:bold">' + statusText + '</span>';
-      
-      if (driverMarkers[d.id]) {
-        driverMarkers[d.id].setLatLng([d.lat, d.lng]);
-        driverMarkers[d.id].setIcon(icon);
-        driverMarkers[d.id].setPopupContent(popupContent);
-      } else {
-        driverMarkers[d.id] = L.marker([d.lat, d.lng], { icon })
-          .addTo(driversMap)
-          .bindPopup(popupContent);
-      }
-    });
-    
-    console.log("🗺️ Drivers on map:", drivers.length);
-  } catch (err) {
-    console.error("Map error:", err);
-  }
-}
-
-// ═══ تشغيل تلقائي إذا كان مسجلاً ═══
-window.addEventListener("DOMContentLoaded", () => {
-  const saved = sessionStorage.getItem("admin_pass");
-  if (saved) {
-    ADMIN_PASSWORD = saved;
-    document.getElementById("admin-password").value = saved;
-    loginAdmin();
-  }
-  
-  document.getElementById("admin-password").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") loginAdmin();
-  });
-});
-// ═══ تحميل الأجهزة المحظورة ═══
- 
- // ═══ تحميل المحظورين ═══
 async function refreshBlockedDevices() {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/blocked-devices`, {
-      headers: { "x-admin-password": ADMIN_PASSWORD }
-    });
+    const res = await fetch(`${API_BASE}/api/admin/blocked-devices`, { headers: { "x-admin-password": ADMIN_PASSWORD } });
     if (!res.ok) return;
     const blocked = await res.json();
     const tbody = document.getElementById("blocked-list");
@@ -708,6 +252,30 @@ async function unblockDevice(deviceId) {
     if (res.ok) { alert("✅ تم"); await refreshAll(); }
   } catch (err) { alert("❌ خطأ"); }
 }
+
+async function refreshAll() {
+  await refreshStats();
+  await refreshUsers();
+  await refreshBlockedDevices();
+}
+
+function showTab(tab) {
+  document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-users").classList.add("hidden");
+  document.getElementById("tab-blocked").classList.add("hidden");
+  if (tab === "users") document.getElementById("tab-users").classList.remove("hidden");
+  else if (tab === "blocked") {
+    document.getElementById("tab-blocked").classList.remove("hidden");
+    refreshBlockedDevices();
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = sessionStorage.getItem("admin_pass");
+  if (saved) { ADMIN_PASSWORD = saved; document.getElementById("admin-password").value = saved; loginAdmin(); }
+  document.getElementById("admin-password").addEventListener("keypress", (e) => { if (e.key === "Enter") loginAdmin(); });
+});
 </script>
 </body>
 </html>
