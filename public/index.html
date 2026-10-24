@@ -740,7 +740,8 @@ window.addEventListener("DOMContentLoaded", function() {
       var errEl = document.getElementById("login-error");
       errEl.textContent = "";
       try {
-        var res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone, password: password }) });
+        var res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone, password: password, deviceId: deviceFingerprint })
+ });
         var data = await res.json();
         if (data.error) { errEl.textContent = data.error; return; }
         saveSession(data.token, data.user);

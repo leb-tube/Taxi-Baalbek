@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة الإدارة - Taxi Lebanon</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
@@ -26,8 +27,8 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
 .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 .admin-tab { padding: 12px 20px; background: #fff; border: 2px solid #ddd; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 15px; }
 .admin-tab.active { background: #ffc107; border-color: #ffc107; }
-.users-section { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.users-section h2 { margin-bottom: 15px; font-size: 20px; }
+.users-section, .map-section { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.users-section h2, .map-section h2 { margin-bottom: 15px; font-size: 20px; }
 .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
 .filter-bar input, .filter-bar select { padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Tahoma; }
 .filter-bar input { flex: 1; min-width: 200px; }
@@ -43,6 +44,7 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
 .block-btn { background: #e67e22; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-right: 5px; }
 .hidden { display: none !important; }
 .info-bar { background: #fffbea; border: 2px solid #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
+#drivers-map { height: 70vh; width: 100%; border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -74,6 +76,7 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
   <div class="admin-tabs">
     <button id="btn-tab-users" class="admin-tab active" onclick="showTab('users')">👥 المستخدمين</button>
     <button id="btn-tab-blocked" class="admin-tab" onclick="showTab('blocked')">🚫 المحظورين</button>
+    <button id="btn-tab-map" class="admin-tab" onclick="showTab('map')">🗺️ خريطة السائقين</button>
   </div>
   
   <!-- تبويب المستخدمين -->
@@ -118,12 +121,23 @@ body { font-family: Tahoma, sans-serif; background: #f0f2f5; }
       </table>
     </div>
   </div>
+
+  <!-- تبويب الخريطة -->
+  <div id="tab-map" class="map-section hidden">
+    <h2>🗺️ مواقع السائقين المتصلين</h2>
+    <p style="color:#666;margin:10px 0">يتحدث تلقائياً كل 5 ثوان</p>
+    <div id="drivers-map"></div>
+  </div>
 </div>
 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 const API_BASE = window.location.origin;
 let ADMIN_PASSWORD = "";
 let allUsers = [];
+let driversMap = null;
+let driverMarkers = {};
+let mapRefreshInterval = null;
 
 async function loginAdmin() {
   const password = document.getElementById("admin-password").value;
@@ -207,18 +221,12 @@ function renderUsers() {
 function filterUsers() { renderUsers(); }
 
 async function blockOnly(deviceId, phone) {
-  if (!deviceId && !phone) { 
-    alert("❌ لا تتوفر بيانات كافية للحظر"); 
-    return; 
-  }
-  
+  if (!deviceId && !phone) { alert("❌ لا تتوفر بيانات كافية للحظر"); return; }
   const reason = prompt("أدخل سبب حظر هذا المستخدم (دون حذف حسابه):");
   if (reason === null) return;
   
   try {
     let blockedCount = 0;
-    
-    // ⚠️ حظر الجهاز إذا وُجد
     if (deviceId) {
       const res = await fetch(`${API_BASE}/api/admin/block-device`, {
         method: "POST",
@@ -227,8 +235,6 @@ async function blockOnly(deviceId, phone) {
       });
       if (res.ok) blockedCount++;
     }
-    
-    // ⚠️ حظر رقم الهاتف دائماً (حتى لو deviceId فارغ)
     if (phone) {
       const res = await fetch(`${API_BASE}/api/admin/block-device`, {
         method: "POST",
@@ -237,17 +243,10 @@ async function blockOnly(deviceId, phone) {
       });
       if (res.ok) blockedCount++;
     }
-    
-    if (blockedCount > 0) {
-      alert("✅ تم حظر المستخدم بنجاح (منع الدخول)");
-    } else {
-      alert("❌ فشل الحظر");
-    }
-    
+    if (blockedCount > 0) alert("✅ تم حظر المستخدم بنجاح");
+    else alert("❌ فشل الحظر");
     await refreshAll();
-  } catch (err) { 
-    alert("❌ خطأ أثناء الحظر: " + err.message); 
-  }
+  } catch (err) { alert("❌ خطأ أثناء الحظر"); }
 }
 
 async function deleteUser(userId, userName, deviceId, phone) {
@@ -293,7 +292,6 @@ async function refreshBlockedDevices() {
     tbody.innerHTML = blocked.map(b => {
       const date = b.blockedAt ? new Date(b.blockedAt).toLocaleDateString("ar-LB") : "-";
       const short = b.deviceId.startsWith("phone_") ? "📱 " + b.deviceId.replace("phone_", "") : b.deviceId.substring(0, 16) + "...";
-      
       return `
         <tr>
           <td><code style="font-size:11px">${short}</code></td>
@@ -320,6 +318,42 @@ async function unblockDevice(deviceId) {
   } catch (err) { alert("❌ خطأ"); }
 }
 
+function initDriversMap() {
+  if (driversMap) { setTimeout(() => driversMap.invalidateSize(), 100); return; }
+  driversMap = L.map("drivers-map").setView([33.8547, 35.8623], 10);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(driversMap);
+  setTimeout(() => driversMap.invalidateSize(), 100);
+}
+
+async function loadDriversOnMap() {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/online-drivers`, { headers: { "x-admin-password": ADMIN_PASSWORD } });
+    if (!res.ok) return;
+    const drivers = await res.json();
+    
+    const currentIds = new Set(drivers.map(d => d.id));
+    for (const id in driverMarkers) {
+      if (!currentIds.has(id)) { driverMarkers[id].remove(); delete driverMarkers[id]; }
+    }
+    
+    drivers.forEach(d => {
+      const color = d.busy ? "#dc3545" : "#28a745";
+      const statusText = d.busy ? "مشغول" : "متاح";
+      const icon = L.divIcon({
+        html: '<div style="background:' + color + ';color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff">🚗</div>',
+        className: "", iconSize: [44, 44], iconAnchor: [22, 22]
+      });
+      const popupContent = `<b>🚗 ${d.name}</b><br>السيارة: ${d.carModel}<br>اللوحة: ${d.carPlate}<br><span style="color:${color};font-weight:bold">${statusText}</span>`;
+      
+      if (driverMarkers[d.id]) {
+        driverMarkers[d.id].setLatLng([d.lat, d.lng]).setIcon(icon).setPopupContent(popupContent);
+      } else {
+        driverMarkers[d.id] = L.marker([d.lat, d.lng], { icon }).addTo(driversMap).bindPopup(popupContent);
+      }
+    });
+  } catch (err) { console.error(err); }
+}
+
 async function refreshAll() {
   await refreshStats();
   await refreshUsers();
@@ -328,16 +362,23 @@ async function refreshAll() {
 
 function showTab(tab) {
   document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".users-section, .map-section").forEach(t => t.classList.add("hidden"));
+  
+  if (mapRefreshInterval) { clearInterval(mapRefreshInterval); mapRefreshInterval = null; }
   
   if (tab === "users") {
     document.getElementById("btn-tab-users").classList.add("active");
     document.getElementById("tab-users").classList.remove("hidden");
-    document.getElementById("tab-blocked").classList.add("hidden");
   } else if (tab === "blocked") {
     document.getElementById("btn-tab-blocked").classList.add("active");
     document.getElementById("tab-blocked").classList.remove("hidden");
-    document.getElementById("tab-users").classList.add("hidden");
     refreshBlockedDevices();
+  } else if (tab === "map") {
+    document.getElementById("btn-tab-map").classList.add("active");
+    document.getElementById("tab-map").classList.remove("hidden");
+    initDriversMap();
+    loadDriversOnMap();
+    mapRefreshInterval = setInterval(loadDriversOnMap, 5000);
   }
 }
 
