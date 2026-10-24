@@ -42,7 +42,7 @@ const POI_CACHE_MAX_SIZE = 500;
 // ═══════════════════════════════════════════════════════════
 // 🔐 Admin Auth
 // ═══════════════════════════════════════════════════════════
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin2026";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TaxiBaalbek@2026";
 
 function checkAdmin(req, res, next) {
   const password = req.headers["x-admin-password"] || req.query.password;
