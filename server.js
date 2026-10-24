@@ -42,7 +42,11 @@ const POI_CACHE_MAX_SIZE = 500;
 // ═══════════════════════════════════════════════════════════
 // 🔐 Admin Auth
 // ═══════════════════════════════════════════════════════════
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TaxiBaalbek@2026";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error("❌ خطأ خطير: ADMIN_PASSWORD غير موجود في متغيرات البيئة (Render Environment)");
+  process.exit(1);
+}
 
 function checkAdmin(req, res, next) {
   const password = req.headers["x-admin-password"] || req.query.password;
