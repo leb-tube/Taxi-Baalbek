@@ -207,20 +207,47 @@ function renderUsers() {
 function filterUsers() { renderUsers(); }
 
 async function blockOnly(deviceId, phone) {
-  if (!deviceId && !phone) { alert("❌ لا تتوفر بيانات كافية للحظر"); return; }
+  if (!deviceId && !phone) { 
+    alert("❌ لا تتوفر بيانات كافية للحظر"); 
+    return; 
+  }
+  
   const reason = prompt("أدخل سبب حظر هذا المستخدم (دون حذف حسابه):");
   if (reason === null) return;
+  
   try {
+    let blockedCount = 0;
+    
+    // ⚠️ حظر الجهاز إذا وُجد
     if (deviceId) {
-      await fetch(`${API_BASE}/api/admin/block-device`, {
+      const res = await fetch(`${API_BASE}/api/admin/block-device`, {
         method: "POST",
         headers: { "x-admin-password": ADMIN_PASSWORD, "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId: deviceId, phone: phone, reason: reason })
       });
+      if (res.ok) blockedCount++;
     }
-    alert("✅ تم حظر الجهاز بنجاح");
+    
+    // ⚠️ حظر رقم الهاتف دائماً (حتى لو deviceId فارغ)
+    if (phone) {
+      const res = await fetch(`${API_BASE}/api/admin/block-device`, {
+        method: "POST",
+        headers: { "x-admin-password": ADMIN_PASSWORD, "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: "phone_" + phone, phone: phone, reason: reason })
+      });
+      if (res.ok) blockedCount++;
+    }
+    
+    if (blockedCount > 0) {
+      alert("✅ تم حظر المستخدم بنجاح (منع الدخول)");
+    } else {
+      alert("❌ فشل الحظر");
+    }
+    
     await refreshAll();
-  } catch (err) { alert("❌ خطأ أثناء الحظر"); }
+  } catch (err) { 
+    alert("❌ خطأ أثناء الحظر: " + err.message); 
+  }
 }
 
 async function deleteUser(userId, userName, deviceId, phone) {
