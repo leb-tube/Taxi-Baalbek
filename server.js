@@ -736,5 +736,5 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🔐 Admin password: ${ADMIN_PASSWORD === "TaxiBaalbek@2026!" ? "TaxiBaalbek@2026! (default)" : "custom"}`);
+  console.log(`🔐 Admin authentication: ${ADMIN_PASSWORD ? "✅ Enabled" : "❌ DISABLED"}`);
 });
